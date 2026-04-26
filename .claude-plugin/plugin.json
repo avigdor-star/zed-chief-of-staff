@@ -1,0 +1,8 @@
+{
+  "name": "zed-chief-of-staff",
+  "version": "0.1.0",
+  "description": "AI Chief of Staff (Zed) — daily operations, prioritization, task dispatch, and situational awareness. From-scratch rebuild of chief-of-staff with a thin SKILL.md router and on-demand flow files.",
+  "author": {
+    "name": "Avigdor"
+  }
+}

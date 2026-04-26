@@ -1,0 +1,20 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "zed-chief-of-staff-marketplace",
+  "owner": {
+    "name": "Avigdor"
+  },
+  "plugins": [
+    {
+      "name": "zed-chief-of-staff",
+      "source": "./",
+      "description": "AI Chief of Staff (Zed) — daily operations, prioritization, task dispatch, and situational awareness. From-scratch rebuild of chief-of-staff with a thin SKILL.md router and on-demand flow files.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Avigdor"
+      },
+      "category": "productivity",
+      "tags": ["chief-of-staff", "productivity", "briefing", "ops", "agent"]
+    }
+  ]
+}
