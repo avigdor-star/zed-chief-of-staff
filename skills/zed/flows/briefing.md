@@ -22,10 +22,9 @@ Read these in order, using the platform from `State Dashboard → My Setup → P
 6. **Reminders today** (added v2): scan `Chief-of-Staff/Reminders/` for files where `status: active AND surface_on <= today AND (snoozed_until is empty OR snoozed_until <= today)`. Feeds REMINDERS TODAY section.
 7. **Messaging channel:** recent messages from the team feed channel (Slack `#cos-feed` or equivalent), if connected.
 8. **Latest briefing:** most recent file in `Chief-of-Staff/Briefings/`.
-9. **Captain's Log (last 7 days):** list entries in `Chief-of-Staff/Captain's Log/` with dates in the last 7 days. Titles + Type only.
-10. **Supporting Documents tied to active projects** (added v2): scan `Chief-of-Staff/Supporting-Documents/` for entries linked to projects active in the briefing. List title + Type + Tags.
-11. **Legacy DBs (read-only, tagged `[legacy]`)** (added v2): scan `Chief-of-Staff/Research/`, `Chief-of-Staff/Drafts/`, `Chief-of-Staff/Action-Plans/`, `Chief-of-Staff/Reference/`. Cap at 10 entries each per `references/signal-filters.md` § Per-source read budget. Surface entries with `[legacy]` annotation.
-12. **Life context (optional):** any journal, life-snapshot, or personal-notes file elsewhere in the vault.
+9. **Supporting Documents tied to active projects** (added v2): scan `Chief-of-Staff/Supporting-Documents/` for entries linked to projects active in the briefing. List title + Type + Tags.
+10. **Legacy DBs (read-only, tagged `[legacy]`)** (added v2): scan `Chief-of-Staff/Research/`, `Chief-of-Staff/Drafts/`, `Chief-of-Staff/Action-Plans/`, `Chief-of-Staff/Reference/`. Cap at 10 entries each per `references/signal-filters.md` § Per-source read budget. Surface entries with `[legacy]` annotation.
+11. **Life context (optional):** any life-snapshot or personal-notes file elsewhere in the vault. Personal Journal entries are NOT scanned during briefings (v3) — they're personal and don't need to surface in operational briefings. Recall via `flows/recall.md` if needed.
 
 ### Notion (`notion`)
 
@@ -36,10 +35,9 @@ Read these in order, using the platform from `State Dashboard → My Setup → P
 5. **Reminders today** (added v2): query Reminders database where `Status = active AND surface_on <= today AND (snoozed_until is empty OR snoozed_until <= today)`.
 6. **Messaging channel:** if connected.
 7. **Latest briefing:** query Briefings database, sort by Date descending, limit 1.
-8. **Captain's Log (last 7 days):** query the top-level `Captain's Log` database. Titles + Type only.
-9. **Supporting Documents tied to active projects** (added v2): query Supporting Documents where `Related Projects` includes any active project. List Name + Type + Tags.
-10. **Legacy DBs (read-only, tagged `[legacy]`)** (added v2): query Research / Drafts / Action Plans / Reference. Cap at 10 each per signal-filters § Per-source read budget. Surface with `[legacy]` annotation.
-11. **Life context (optional):** any life-snapshot or journal page in the broader Notion workspace.
+8. **Supporting Documents tied to active projects** (added v2): query Supporting Documents where `Related Projects` includes any active project. List Name + Type + Tags.
+9. **Legacy DBs (read-only, tagged `[legacy]`)** (added v2): query Research / Drafts / Action Plans / Reference. Cap at 10 each per signal-filters § Per-source read budget. Surface with `[legacy]` annotation.
+10. **Life context (optional):** any life-snapshot page in the broader Notion workspace. Personal Journal entries are NOT scanned during briefings (v3) — they're personal and don't need to surface in operational briefings. Recall via `flows/recall.md` if needed.
 
 > In Notion, if something doesn't fit the schema in `notion-conventions.md`, the schema is right and the action is wrong.
 
@@ -140,14 +138,52 @@ After the final section, work through queued actions one at a time. Confirm each
 While scanning sources, watch for things that should be documented:
 
 - **Operational updates** (task completed, project status changed, new blocker, deadline passed, payment issue) → update the relevant Task, Project, or State Dashboard record. **Apply automatically during housekeeping AND tell the user what you did and why in the briefing itself.** ("Updated the project record for [project] — marked [task] as complete since the deploy went out yesterday.")
-- **Captain's Log moments** (an interesting idea, a product worth exploring, a lesson learned, a personal win, something worth remembering but not tied to a specific task) → **never auto-write.** Explain why it seems like a Captain's Log entry and let the user decide. ("That five-star review feels like something worth keeping in your Captain's Log as a Win — easy to forget, good to look back on. Want me to log it?")
+- **Working-doc moments** (a brainstorm, prep notes, a draft, a framework — something tied to a project but not a task) → **never auto-write.** Explain why it seems like a Supporting Document and let the user decide. ("That framework you mentioned for [project] sounds like a `plan` Supporting Doc — want me to capture it?")
 - **Judgment calls** (not sure where it goes) → offer at the end of the briefing. Keep to 3 items max: "Spotted a few things that might be worth capturing — [short list with where each would go]. Want me to handle any of these?"
+
+**Personal/reflective content is NOT proactively flagged in-brief (v3).** Personal Journal has its own dedicated end-of-brief Personal Check-in section (Step 6 below). Wins, lessons, feelings, and other reflective content are surfaced ONCE per brief in that single predictable touchpoint — not scattered through the brief.
 
 For all logging routing details see `flows/documentation-routing.md`.
 
 ---
 
-## Step 6 — Housekeeping (after the briefing)
+## Step 6 — Personal Check-in (added v3)
+
+After the queue and proactive documentation are handled — but BEFORE housekeeping — render the Personal Check-in section. This is the single predictable journaling touchpoint per brief.
+
+### Render gate
+
+Before rendering, check `State Dashboard → My Setup → journal_check_in_frequency`:
+- `every-brief` (default) → render this brief.
+- `weekly` → render only on the first brief of each calendar week (Monday, or earliest brief of the week if no Monday brief).
+- `paused` → skip entirely. Don't render.
+
+### What to render
+
+Use the user's chosen Chief Personality (per `references/personality.md`) to phrase. Default wording (Professional):
+
+> "**Personal Check-in.** Anything on your mind today? Want to journal about something, or just note how you're feeling? (yes / nope / not today)"
+
+Personality variations:
+- **Playful:** "End-of-brief vibe check 💚 — anything to journal? (yes / nope / not today)"
+- **Dry wit:** "Personal check-in (the part of the brief where I ask if you have feelings). Journal? (yes / nope / not today)"
+- **Warm:** "Before we wrap — how's your day landing? Want to capture anything? (yes / nope / not today)"
+
+### Apply the user's response
+
+- **Engages** (any pick that opens journaling — "yes," "draft now," supplies content directly, picks one of the 4 routes) → load `flows/journal.md` and pass control. Reset `journal_check_in_skips` to 0 (snapshot first per G2).
+- **Skips** (any "no," "nope," "not today," "skip," "next") → increment `journal_check_in_skips` by 1 (snapshot first per G2). If counter reaches 5, surface the soft-mute prompt per `flows/journal.md` § Step 4.
+- **Quick clarifying question** → answer briefly, then re-ask.
+
+### When to skip rendering entirely
+
+In addition to the render gate above, suppress the Personal Check-in this brief if:
+- `migration_v3_choice` is missing or `pending` AND `flows/version-migration.md` is firing this session — the migration prompt takes priority. The check-in resumes next brief.
+- The brief was triggered by an alert auto-fire (not a user-initiated brief). Auto-briefs are operational and shouldn't append a personal prompt.
+
+---
+
+## Step 7 — Housekeeping (after the briefing)
 
 Run in this order. **Snapshot FIRST is the hard gate (G2).**
 

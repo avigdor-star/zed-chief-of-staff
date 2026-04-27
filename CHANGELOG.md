@@ -4,6 +4,58 @@ Changes to the skill during beta development. Newest first.
 
 ---
 
+## 2026-04-27
+
+### Zed v3 — Personal Journal feature (Captain's Log retired)
+
+Mikoshi-validated plan (YELLOW → resolved by adopting full v3 release with v2-pattern migration). Added in response to user feedback that Captain's Log had become a burden; replaced with a lighter, more sustainable Personal Journal anchored by a single end-of-brief Personal Check-in.
+
+#### Files created
+
+- `skills/zed/references/personal-journal.md` — Personal Journal schema (Date / Mood / Energy / Wins / Challenges / Gratitude / Free text), per-platform storage (Notion / Obsidian / Logseq / plain markdown), auto-create-on-first-use behavior, no auto-generated first entry rule, recall pointer, graduation rule pointer, G9 PRC summary.
+- `skills/zed/flows/journal.md` — Personal Journal engagement flow. Step 1 first-use auto-create gate. Step 2 four-pick routing (draft now / find calendar time / blank entry / suggest prompt based on the week). Step 3 per-pick mechanics. Step 4 engagement-skip tracking with soft-mute (5 skips → ask once to dial back to weekly or pause). Step 5 graduation offer (PJ Free Text → SD brainstorm). G9 PRC summary.
+
+#### Files edited
+
+- `skills/zed/SKILL.md` — bumped `Current:` from v2 to v3; added v3 changelog entry at top (parser-pinned format preserved). Outline gains a new row for Personal Journal phrases routed to `flows/journal.md`; documentation-routing row updated to drop Captain's Log as silent fallback; recall row updated to mention Personal Journal. Bootstrap step 2 identity load extended with `migration_v3_choice`, `personal_journal_location`, `journal_check_in_skips`, `journal_check_in_frequency`. Bootstrap step 9 gains v3 auto-complete-on-zero check (parallel to v2's). Stable Names: Personal Journal added (workspace top level, file-based subfolder); Captain's Log marked LEGACY but preserved so existing user data isn't orphaned. Notion / file-based / Logseq frontmatter sections add Personal Journal entries and mark Captain's Log entries legacy. State Dashboard property list adds the four new v3 fields. Glossary adds entries for Personal Journal, Personal Check-in, Graduation. Reference Manifest adds `personal-journal.md` and marks `captains-log.md` legacy; mentions `flows/journal.md`.
+- `skills/zed/flows/briefing.md` — Step 1 source-scan: removed "Captain's Log (last 7 days)" entry from both file-based and Notion paths; added explicit note that Personal Journal is NOT scanned during briefings (recall via `flows/recall.md` if needed). Step 5 Proactive documentation: replaced "Captain's Log moments" prompt with a "Working-doc moments" prompt; added explicit clarifying note that personal/reflective content lives in the new dedicated end-of-brief Personal Check-in (Step 6) — never scattered through the brief. NEW Step 6 — Personal Check-in: render gate keyed on `journal_check_in_frequency`, personality-aware default wording, engages → load `flows/journal.md`, skips → increment counter, suppresses for migration sessions and alert auto-fires. Old Step 6 (Housekeeping) renumbered to Step 7.
+- `skills/zed/flows/documentation-routing.md` — fully rewritten flow file. v3: ALWAYS asks where ambiguous content goes (no silent default). Personal Journal is reserved for explicit journal phrases (route through `flows/journal.md`, not here). Legacy "captain's log: …" phrase gracefully redirects to `flows/journal.md` with optional one-time tip after 3 redirects. Stripped Captain's Log graduation rule from this flow (lives in `references/documentation-routing.md` § graduation rule).
+- `skills/zed/references/documentation-routing.md` — graduation rule reframed from "Captain's Log Idea ↔ SD brainstorm" to "Personal Journal Free Text ↔ SD brainstorm" with legacy fallback for users mid-migration. Type-transitions list updated. Snapshot-rule list updated to include all v3 State Dashboard fields requiring G2.
+- `skills/zed/flows/recall.md` — search rules now include Personal Journal (full-text on body sections + Mood / Energy / Date filters); Captain's Log demoted to legacy (read-only, surfaced as `[legacy CL]`). Single-system query patterns table updated. Result format extended to handle Personal Journal entries (mood instead of Type). Graduation offers section now covers BOTH Personal Journal Free Text → SD brainstorm AND legacy Captain's Log Idea → SD brainstorm (at most one per recall per G9).
+- `skills/zed/flows/setup.md` — S4.5 fully rewritten. Setup no longer creates Captain's Log. New users get told once that Personal Journal exists and will auto-create on first use. S5 sets `last_seen_version = v3`, `migration_v2_choice = complete`, `migration_v3_choice = complete`, `personal_journal_location = blank`, `journal_check_in_skips = 0`, `journal_check_in_frequency = every-brief` for new users.
+- `skills/zed/flows/version-migration.md` — added Step 5: v2→v3 migration offer with three branches (move-all = archive Captain's Log to `Archive/Captain's Log/` or Notion Archive subpage; leave-in-place = quarterly re-prompt; walking = one entry at a time). Auto-complete-on-zero hooked into Bootstrap step 9. Quarterly re-prompt for choice (b) integrated into Monthly Cleanup. Snapshot rule extended to list `migration_v3_choice` among State Dashboard writes requiring G2.
+- `skills/zed/references/notion-conventions.md` — Top-level structure tree gains Personal Journal database (workspace top level, NOT under CoS parent — same pattern Captain's Log used) and marks Captain's Log legacy. New `Personal Journal database (added v3)` section with property table and saved view recommendations. New `Captain's Log database (LEGACY in v3)` section preserving the schema for read access. State Dashboard property list at the top of the tree extended with the four new v3 fields.
+- `skills/zed/references/file-based-conventions.md` — Vault Location tree gains `Personal Journal/` subfolder (auto-created on first use) and `Captain's Log/` legacy subfolder. Removed the v2 statement "personal journal entries do NOT live under Chief-of-Staff/" — that's wrong in v3. New "Personal Journal entry frontmatter" section with markdown-headers body convention. New "Captain's Log entry frontmatter (LEGACY in v3)" section preserving the schema. State Dashboard frontmatter extended with the four v3 fields; bumped `last_seen_version` example from v2 to v3.
+
+#### Files deleted
+
+- `skills/zed/flows/captains-log-recall.md` — the deprecation stub left over from v2 (was just a redirect notice). Safe to remove now per the v2 changelog note. `flows/recall.md` is the canonical cross-system recall flow.
+
+#### Files NOT deleted (intentional)
+
+- `skills/zed/references/captains-log.md` — KEPT as legacy documentation. The v3 plan archives existing Captain's Log entries (or leaves them in place per user choice), and recall.md still queries them. Schema documentation needs to remain accessible.
+
+#### G7' audits required for v3 ship
+
+- **Null-handling check.** Personal Journal entries handle null/missing optional fields gracefully (Mood / Energy / Wins / Challenges / Gratitude / Notes can all be empty). Recall queries on Mood use partial match to handle null cases. `journal_check_in_skips` defaults to 0 if missing. `journal_check_in_frequency` defaults to `every-brief` if missing.
+- **Status filter audit.** No Status field on Personal Journal — N/A. Briefing source-scan no longer includes Captain's Log queries (removed). Recall correctly distinguishes Personal Journal from legacy Captain's Log.
+- **Notion saved views audit.** Personal Journal database gets three default views on auto-create (Recent / By Mood / By Month). Captain's Log views unchanged (legacy DB).
+- **External integration audit.** No watcher prompts referenced Captain's Log directly — N/A.
+
+#### G9 PRC review for v3
+
+- **Provenance.** Personal Journal entries record Date + cos_id + Mood (if supplied) + Energy (if supplied). All entries are user-authored — Chief never auto-writes. Engagement skips are tracked per session and persisted to State Dashboard with G2 snapshots.
+- **Reversal.** Every state-changing verb has an inverse: entries are editable / deletable; calendar blocks (from Pick 2) are user-deletable; soft-mute decision is reversible by saying "turn journal check-in back on"; graduation is reversible (delete the SD; original PJ entry preserved).
+- **Conflict-Detection.** Single conflict point is the graduation offer — Chief asks before promoting Free Text to a Supporting Document. Engagement skip tracking deconflicts the soft-mute prompt against other end-of-brief prompts. Migration prompts deconflict per existing G9 rule (at most one legacy-themed prompt per session).
+
+#### Out of scope (intentional)
+
+- Personal Journal recall by Mood with mood-similarity expansion (e.g., "show me when I felt down" matching "low," "tired," "exhausted") — deferred. Current implementation uses partial match only.
+- Mood-trend charting in briefings — deferred. Personal Journal entries don't surface in briefings at all in v3.
+- The standalone `obsidian-journal` skill (in a separate plugin) is NOT modified. Bootstrap step 7 already detects parallel installations of CoS-themed plugins; for users running both, the standalone skill takes precedence on Obsidian setups.
+
+---
+
 ## 2026-04-26
 
 ### Zed v2 — 5-feature deployment

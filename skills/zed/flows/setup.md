@@ -169,27 +169,17 @@ After creating databases, populate Domains and Departments with the entries from
 
 ---
 
-## S4.5 — Create the Captain's Log (mandatory)
+## S4.5 — Personal Journal (auto-create on first use, NOT during setup) — updated v3
 
-Captain's Log is mandatory on every platform. Load `references/captains-log.md` for the schema and platform-specific layout.
+In v3, Personal Journal replaces Captain's Log as the home for personal/reflective content. Unlike Captain's Log (which was created mandatorily during setup), Personal Journal is **auto-created on first use** — i.e., the first time the user engages with the end-of-brief Personal Check-in or says a journal phrase.
 
-Create the structure:
+**During setup, do nothing for Personal Journal.** Don't create the structure, don't write a placeholder entry. Just tell the user once at the end of S4 (after the operational structure is in place):
 
-- **`notion`** → create a `Captain's Log` database at the **workspace top level** (NOT under the Chief of Staff parent — kept independent so the user can find it). Apply the schema; add the three default views (Recent, By Type, By Project).
-- **`obsidian`** / **`markdown-folder`** → create the folder `Chief-of-Staff/Captain's Log/` (empty, ready for entries).
-- **`logseq`** → don't create the page proactively. Record in the State Dashboard that Captain's Log lives at the page `Captain's Log` (or use the namespace path if `namespaces` placement). The page is created on the first entry.
+> "There's also a Personal Journal feature for tracking how you're feeling, wins, gratitude, and reflective notes. I'll set it up the first time you engage with the end-of-brief Personal Check-in (or you can say 'journal entry' anytime). Nothing for you to do now."
 
-**Then write the one auto-generated first entry** to mark today's setup. This is the ONE entry the system creates on the user's behalf:
+Why auto-create on first use: Personal Journal entries are personal and the Chief never auto-writes them. Forcing a placeholder "set up" entry during setup felt prescriptive. Letting it appear when the user is actually ready to journal feels lighter.
 
-- Title: `Chief of Staff set up`
-- Date: today
-- Type: `Milestone`
-- Project: `Chief of Staff`
-- Details: short summary — platform chosen, date, anything notable
-
-Tell the user where Captain's Log lives and how to add entries:
-
-> "Captain's Log is set up. To log something, just say 'log this: …' or 'captain's log: …' and I'll figure out where it belongs — task update, project note, or the Captain's Log — and write it there. I already added one entry to mark today's setup."
+**For existing v1/v2 users with a Captain's Log:** The v2→v3 migration in `flows/version-migration.md` handles archiving / preserving / walking through old Captain's Log entries based on user choice. New users (going through this setup for the first time) skip migration entirely — `migration_v3_choice` is set to `complete` in S5.
 
 ---
 
@@ -199,10 +189,15 @@ Fill in the State Dashboard from S2 answers, following the conventions file for 
 
 Fill in:
 - **My Setup** (name, email, role, company, alert threshold, chief name, personality, **platform — must match the pick from S1.5**, `setup_status` — set to `complete` at end of S6, or `complete-with-warning` if backup was deferred)
-- **Version fields (v2 — new users skip migration entirely):**
-  - `last_seen_version` = the current version from SKILL.md's Skill Version section (e.g., `v2`).
-  - `migration_v2_choice` = `complete` (new users have no legacy entries to migrate).
+- **Version fields (new users skip all migrations entirely):**
+  - `last_seen_version` = the current version from SKILL.md's Skill Version section (e.g., `v3`).
+  - `migration_v2_choice` = `complete` (new users have no v1/v2 legacy DB entries to migrate).
+  - `migration_v3_choice` = `complete` (new users have no Captain's Log entries to archive).
   - `legacy_plugin_choice` = blank (Bootstrap step 7 detection handles this if the older plugin is installed).
+- **Personal Journal fields (added v3, new users):**
+  - `personal_journal_location` = blank (set on first use, auto-created when user first engages).
+  - `journal_check_in_skips` = `0`.
+  - `journal_check_in_frequency` = `every-brief`.
 - **Active Projects** (from project list)
 - **High-Priority People** (from key people list)
 - **This Week's Focus** (from priorities)

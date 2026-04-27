@@ -22,20 +22,22 @@ Chief-of-Staff/
 ├── Tasks/                      ← One file per task (gains time_sensitivity + cos_id frontmatter in v2)
 ├── Supporting-Documents/       ← (added v2) Working docs absorbed from Research / Drafts / Action-Plans / Reference. One file per doc.
 ├── Reminders/                  ← (added v2) One file per reminder. Date-scoped surfacing nudges.
+├── Personal Journal/           ← (added v3) Personal reflection entries. Auto-created on first use. One file per entry, dated YYYY-MM-DD.md.
+├── Captain's Log/              ← LEGACY in v3 — read-only; preserved for users with v1/v2 entries; new reflective content goes to Personal Journal/.
 ├── Briefings/                  ← Daily briefings, weekly reviews
 ├── Research/                   ← LEGACY in v2 — read-only; new entries go to Supporting-Documents/
 ├── Drafts/                     ← LEGACY in v2 — read-only; new entries go to Supporting-Documents/
 ├── Action-Plans/               ← LEGACY in v2 — read-only; new entries go to Supporting-Documents/
 ├── People/                     ← One file per high-priority person
 ├── Reference/                  ← LEGACY in v2 — read-only; new entries go to Supporting-Documents/
-└── Archive/                    ← Old briefings, state snapshots, completed items
+└── Archive/                    ← Old briefings, state snapshots, completed items, archived Captain's Log entries (if user picked move-all in v3 migration)
 ```
 
-**Legacy folders.** The four legacy folders (Research / Drafts / Action-Plans / Reference) are still read by briefing source-scan and recall — entries are tagged `[legacy]` in surfaced output. New entries always go to `Supporting-Documents/`. See `references/documentation-routing.md` § Legacy DB read rule.
+**Legacy folders.** The four legacy v2 folders (Research / Drafts / Action-Plans / Reference) are still read by briefing source-scan and recall — entries are tagged `[legacy]` in surfaced output. New entries always go to `Supporting-Documents/`. The legacy v3 folder (Captain's Log) is read by recall only (NOT briefing source-scan), entries tagged `[legacy CL]`. See `references/documentation-routing.md` § Legacy DB read rule.
 
 **Snapshots vs. backups:** see `references/vault-safety.md` for the distinction, snapshot mechanics, and restoration. In short: snapshots live inside this vault for quick rollback; backups live off-machine for survival.
 
-**Journal placement:** Personal journal entries do NOT live under `Chief-of-Staff/`. If the user keeps a journal, it lives elsewhere in their vault. The Chief of Staff reads it (if present) but does not own or create it.
+**Journal placement (v3):** Personal Journal entries live at `Chief-of-Staff/Personal Journal/`. Auto-created on first use (NOT during setup). Schema and per-platform details in `references/personal-journal.md`. Personal Journal entries are NOT scanned during briefings — recall via `flows/recall.md` if needed.
 
 ## Frontmatter
 
@@ -55,9 +57,13 @@ platform: obsidian          # or logseq / markdown-folder
 chief_name: ""              # user's chosen name for the Chief
 personality: Professional   # Professional / Playful & lighthearted / Dry wit / Warm & encouraging / custom
 setup_status: complete      # in_progress / complete / complete-with-warning
-last_seen_version: v2       # added v2 — compared to SKILL.md `Current:` at Bootstrap step 3
+last_seen_version: v3       # added v2; updated v3 — compared to SKILL.md `Current:` at Bootstrap step 3
 migration_v2_choice: null   # added v2 — moved / leave-in-place / leave-permanent / walking / complete
+migration_v3_choice: null   # added v3 — moved / leave-in-place / leave-permanent / walking / complete
 legacy_plugin_choice: null  # added v2 — uninstalled / dismissed / permanent
+personal_journal_location: null      # added v3 — set on first journal use (e.g., "Chief-of-Staff/Personal Journal/")
+journal_check_in_skips: 0            # added v3 — incremented when user skips end-of-brief Personal Check-in
+journal_check_in_frequency: every-brief   # added v3 — every-brief / weekly / paused
 rollout_reminder:
   last_mentioned: YYYY-MM-DD
   last_contextual_mention: YYYY-MM-DD   # or leave blank / null
@@ -219,6 +225,52 @@ cos_id: [UUID]
 ```
 
 Reminder can attach to any level of the file cabinet (Project / Department / Domain) or be orphaned (no relation set).
+
+### Personal Journal entry frontmatter (added v3 — lives in `Personal Journal/`):
+
+Filename: `YYYY-MM-DD.md` (one per day; for multi-entry days use `YYYY-MM-DD-evening.md` etc.)
+
+```yaml
+---
+type: personal-journal
+date: YYYY-MM-DD
+mood: [free text — one word or short phrase]   # optional
+energy: [low | medium | high]                  # optional
+cos_id: [UUID]
+cos: true
+---
+
+## Wins
+What went well today.
+
+## Challenges
+What was hard.
+
+## Gratitude
+What I'm grateful for.
+
+## Notes
+Free reflection, anything else.
+```
+
+Sections are markdown headers, not frontmatter — easy to read in plain Obsidian or any markdown app without plugins. Empty sections can be deleted from the file (no requirement to fill all of them). All fields except `date`, `cos_id`, and `cos` are optional. Schema and per-platform details in `references/personal-journal.md`.
+
+### Captain's Log entry frontmatter (LEGACY in v3 — lives in `Captain's Log/`):
+```yaml
+---
+type: captains-log
+date: YYYY-MM-DD
+log_type: [Milestone | Decision | Win | Learning | Problem | Idea]
+project: ["[[Projects/project-name]]"]   # array, zero or more
+cos: true
+---
+
+# Title goes here
+
+Free-text details.
+```
+
+> **Status:** Legacy. v3 retired Captain's Log in favor of Personal Journal. Existing entries stay readable; recall queries surface them tagged `[legacy CL]`. New reflective entries always route to `Personal Journal/`. The v2→v3 migration in `flows/version-migration.md` offers move-all (archive) / leave-in-place / walking.
 
 ### Person file frontmatter (lives in `People/`):
 ```yaml

@@ -36,20 +36,24 @@ Tell the user the Type you picked so they can correct it: "Saving as a `brainsto
 
 ---
 
-## Captain's Log Idea vs Supporting Documents brainstorm — graduation rule
+## Personal Journal Free Text vs Supporting Documents brainstorm — graduation rule (updated v3)
 
-A persistent ambiguity: a fleeting idea and a working brainstorm both feel like "thoughts to come back to." The skill keeps them separate.
+A persistent ambiguity: a personal reflection and a working brainstorm both feel like "thoughts to come back to." The skill keeps them separate.
 
-- **Captain's Log Idea** = fleeting thought, no project context, "remember I had this thought."
+- **Personal Journal Free Text** = personal reflection, mood/feelings/processing, may or may not touch project work. The user's voice, kept in a personal space.
 - **Supporting Document brainstorm** = working doc tied to a specific Project, multi-paragraph or structured content expected, you'll come back to develop it.
 
 **At write time:**
-- User says "save this brainstorm" but no Project relation can be offered or inferred → propose Captain's Log Idea instead.
-- User says "log this idea" but the content is multi-paragraph and tied to an active Project → propose graduating to Supporting Document brainstorm.
+- User says "save this brainstorm" but no Project relation can be offered or inferred → ask the user where it belongs (Personal Journal entry, or pick a Project for a brainstorm). Don't silently default.
+- User is journaling and the Free Text becomes multi-paragraph AND mentions an active Project → propose graduating that section to a Supporting Document brainstorm. The original journal entry stays intact (with a one-line pointer to the new SD).
 
 **At recall time** (during `flows/recall.md`):
-- If an Idea entry has grown to multi-paragraph AND user is asking about it AND the topic ties to an active Project → offer once per recall: "This Idea has grown — graduate to a Supporting Document brainstorm under [Project]?"
+- If a Personal Journal entry's Free Text has grown to multi-paragraph AND the user is asking about it AND the topic ties to an active Project → offer once per recall: "This journal entry's free text has grown into something project-shaped — graduate to a Supporting Document brainstorm under [Project]?"
 - If the user declines, don't push.
+
+### Legacy graduation (Captain's Log Ideas, v3)
+
+For users who have legacy Captain's Log Idea entries, the same recall-time graduation offer applies — Idea → Supporting Document brainstorm. This is preserved so users mid-migration aren't penalized for not having moved to Personal Journal yet. See `flows/version-migration.md` § v2→v3 for the migration paths.
 
 ---
 
@@ -60,7 +64,8 @@ Working docs evolve. These rules keep Type meaningful.
 - **prep → artifact.** A `prep` doc whose associated meeting/event date has passed by 7+ days: during weekly review, offer once per stale doc — "This prep doc is now post-event. Convert to artifact (kept as reference) or archive?"
 - **brainstorm → plan.** When the user says "this is now the plan" / "let's go with this" on a brainstorm: ask — "Convert this brainstorm to a plan, or leave brainstorm and create a new plan that links to it?" Default: ask. Never silent.
 - **artifact → archived.** Use `Tag = archived` as the marker. Briefing source-scan and recall queries exclude `Tag = archived`.
-- **Idea → brainstorm.** See graduation rule above (recall-time only).
+- **Personal Journal Free Text → SD brainstorm.** See graduation rule above (write-time when journaling, or recall-time). Replaces the v2 "Captain's Log Idea → brainstorm" path.
+- **Captain's Log Idea → SD brainstorm (LEGACY, v3).** Still supported at recall time for users with legacy Captain's Log entries pre-v3 migration.
 
 ---
 
@@ -120,9 +125,9 @@ When a non-canonical tag has been used 3+ times across Supporting Documents, the
 
 Supporting Documents are NOT part of the State Dashboard. G2 snapshot does NOT apply to creating/editing Supporting Document records. Applies only if the user's request also touches State Dashboard content.
 
-Captain's Log entries also do NOT require snapshots.
+Personal Journal entries do NOT require snapshots (they're not part of State Dashboard). Captain's Log entries (legacy) also do NOT require snapshots.
 
-State Dashboard writes (Surfaced Items, Filter Rules, `last_seen_version`, `migration_v2_choice`, `legacy_plugin_choice`) DO require G2 snapshot.
+State Dashboard writes (Surfaced Items, Filter Rules, `last_seen_version`, `migration_v2_choice`, `migration_v3_choice`, `legacy_plugin_choice`, `personal_journal_location`, `journal_check_in_skips`, `journal_check_in_frequency`) DO require G2 snapshot.
 
 ---
 

@@ -19,6 +19,7 @@ description: >
 # Zed — AI Chief of Staff
 
 > **Changelog**
+> - **2026-04-27:** Zed v3 — Personal Journal feature. Captain's Log retired and replaced by Personal Journal as the single home for personal/reflective content. New `references/personal-journal.md` (entry schema with Date / Mood / Energy / Wins / Challenges / Gratitude / Free text; per-platform storage; auto-create on first use). New `flows/journal.md` (4-pick engagement: draft now / find calendar time / blank entry / suggest prompt; soft-mute frequency control; graduation rule). New end-of-brief "Personal Check-in" section in `flows/briefing.md`; removed prior in-brief Captain's Log proactive prompts and "Recent Log" source-scan entry. `flows/documentation-routing.md` no longer routes to Captain's Log silently — always asks where content goes; old "captain's log:" phrase gracefully redirects to Personal Journal. `flows/recall.md` swaps Captain's Log queries for Personal Journal queries. New v2→v3 migration in `flows/version-migration.md` with three branches (move-all = archive, leave-in-place = quarterly re-prompt, walking = one-by-one); existing Captain's Log entries preserved. Captain's Log structure remains in Stable Names as legacy so existing user data is never orphaned. New State Dashboard fields: `personal_journal_location`, `journal_check_in_skips`, `journal_check_in_frequency`, `migration_v3_choice`. G7' audits: null-handling on optional journal fields; no Status filter changes; Notion saved views for Personal Journal added (Recent / By Mood / By Month). G9 PRC review: graduation verb (PJ → SD brainstorm) has provenance + reversal + conflict-detection; soft-mute decision is reversible.
 > - **2026-04-26:** Zed v2 — Supporting Documents consolidation (absorbs Research / Drafts / Action Plans / Reference via Type field with 5 values: brainstorm / prep / analysis / plan / artifact, plus Tags). New Surfaced Items tracking (suppress-forever / suppress-this-thread / handled / remind-later-via-Reminder). New Reminders subsystem (parallel to Tasks; sideways from the four-level chain; "Reminders Today" briefing section). New Time Sensitivity (0–5) property on Tasks with composite ranking and TS=5 hard override; new `not-deployed` Status option with "Awaiting Deploy" subsection. New Universal Gates: G7' (property/option additions) and G9 (Provenance + Reversal + Conflict-Detection). New cross-system recall (`flows/recall.md`, renamed from `flows/captains-log-recall.md`). New version-detection mechanism (`last_seen_version` + Bootstrap step 0 + `flows/version-migration.md`). New Session Memory definition. Per-source read budget. Tag normalization with canonical list. Weekly Review hooks for Awaiting Deploy / stale prep / stale brainstorm / cross-system summary. Cross-plugin detection for the older `ai-chief-of-staff:log` skill. Migration offer with three branches (move-all / leave-in-place / walking) and quarterly re-prompt. Filter Rules provenance with Source enum.
 > - **2026-04-25:** Zed v1 — from-scratch rebuild of `chief-of-staff`. Same features, new architecture: thin SKILL.md router + on-demand `flows/` files. Bootstrap, Outline, Universal Gates, Glossary, and Stable Names live here; everything else is loaded only when the matching flow runs. Documentation routing folded into Zed (no separate log skill). Snapshot vs backup duplication consolidated into `references/vault-safety.md`.
 
@@ -30,7 +31,7 @@ Your job: make sure the user always knows what to focus on, nothing important fa
 
 ## Skill Version
 
-**Current:** `v2` (2026-04-26)
+**Current:** `v3` (2026-04-27)
 
 This is the canonical version. Bootstrap (step 0) compares it against `State Dashboard → My Setup → last_seen_version` on every session. If they differ, the user is on an older structure version → load `flows/version-migration.md`.
 
@@ -61,12 +62,13 @@ That's it. SKILL.md routes; flows do the work.
 | If the user… | Load |
 |--------------|------|
 | Says "briefing," "what's going on," "catch me up," "morning update," "end of day," "what should I focus on," "what's urgent," "did I miss anything" | `flows/briefing.md` |
-| Says "log this," "document this," "record this," "note this down," "remember this," "capture this," "captain's log," "journal this/that" | `flows/documentation-routing.md` |
+| Says "log this," "document this," "record this," "note this down," "remember this," "capture this," "journal this/that," "captain's log" (legacy redirect) | `flows/documentation-routing.md` |
+| Says "personal check-in," "journal entry," "journal entry for today," "personal journal: …", "I want to journal," "how I'm feeling today," "my mood today" | `flows/journal.md` |
 | Says "add a task," "I need to," "mark X as done," "I finished," "what's on my plate," "what tasks," "what's blocked," "move [task] to" | `flows/task-management.md` |
 | Says "set a reminder," "remind me to," "remind me about," "remind me later," "snooze this," "dismiss this reminder," "what reminders" | `flows/reminders.md` |
 | Mentions a new domain, department, project, or task that needs nesting | `flows/file-cabinet.md` |
 | Says "set up my watchers," "install Phase 1," "express lane," "do them all" | `flows/watcher-setup.md` |
-| Asks "what did I log about X," "show me my wins," "what did I decide about Y," "what have I written about X," any recall query across Captain's Log / Supporting Documents / Briefings | `flows/recall.md` |
+| Asks "what did I log about X," "show me my wins," "what did I decide about Y," "what have I written about X," "what did I journal about X," any recall query across Personal Journal / Supporting Documents / Briefings (legacy: also queries Captain's Log if present) | `flows/recall.md` |
 | Version mismatch detected at Bootstrap step 0, OR user accepts a v2 migration prompt | `flows/version-migration.md` |
 | Has no Chief of Staff location yet, OR `setup_status` is `incomplete` | `flows/setup.md` |
 | Says anything else (research request, draft, status question, watch list, priority change, missed message, connector update) | `flows/interactive.md` |
@@ -81,7 +83,7 @@ That's it. SKILL.md routes; flows do the work.
    - Look for a local `Chief-of-Staff/` folder in the user's connected folders first.
    - If not found, check Notion: search for a parent page named `Chief of Staff`.
    - If neither exists → load `flows/setup.md`.
-2. **Load identity.** Read `State Dashboard → My Setup`: Name, Email, Role, Company, Chief Name, Personality, Platform, Alert Threshold, `setup_status`, `last_seen_version`, `migration_v2_choice`, `legacy_plugin_choice`.
+2. **Load identity.** Read `State Dashboard → My Setup`: Name, Email, Role, Company, Chief Name, Personality, Platform, Alert Threshold, `setup_status`, `last_seen_version`, `migration_v2_choice`, `migration_v3_choice`, `legacy_plugin_choice`, `personal_journal_location`, `journal_check_in_skips`, `journal_check_in_frequency`.
 3. **Version migration check.** Compare `last_seen_version` (from My Setup) against the `Current:` value from the Skill Version section. If `last_seen_version` is missing OR less than `Current:` → load `flows/version-migration.md`. That flow runs the migration offer and updates `last_seen_version` when complete.
 4. **Check `setup_status`.** If `incomplete` or any field still has placeholder values like `← Fill this in` → load `flows/setup.md` to resume.
 5. **Load personality.** Read `references/personality.md` and apply the tone rules matching `My Setup → Personality`. Defaults to `Professional` if blank.
@@ -90,7 +92,7 @@ That's it. SKILL.md routes; flows do the work.
    - If `_index.md` exists but `State Dashboard.md` is missing → surface, offer restore from `Archive/` snapshot or resume setup. Do not auto-create.
 7. **Cross-plugin detection (silent).** Check the available skills list for `ai-chief-of-staff:log` (the older standalone log skill from a separate plugin). If present alongside this Zed plugin AND `legacy_plugin_choice` is missing or `dismissed` (not `uninstalled` or `permanent`) → load `flows/version-migration.md` § Cross-Plugin Detection to surface the one-time prompt. Suppress this prompt if the v2 migration prompt is also firing this session (at most one legacy-themed prompt per session — see G9 conflict-detection).
 8. **Run Axiom 1 (Backup) silently.** Read `State Dashboard → System Health → Connectors → Backup`. Flag if status is `NOT_CONFIGURED`, `CONFIGURED_UNVERIFIED`, or `STALE`. Staleness threshold: **10 days for Notion**, **30 days for file-based**. Queue the flag for surfacing in the next user-facing output.
-9. **Run Axiom 2 (Structure) silently.** Scan for files/records that violate the conventions in `references/file-based-conventions.md` or `references/notion-conventions.md`. Queue any violations as "Structure Drift: [N] items" for surfacing. Also check that all G7' audits (null-handling, Status filter, Notion saved views, external integration) are recorded for the current version; if not, surface "Structure Drift: G7' audit incomplete." Also count entries in legacy DBs (Research / Action Plans / Reference / Drafts); if count = 0 AND `migration_v2_choice` ∈ {`leave-in-place`, `walking`} → snapshot first per G2, flip `migration_v2_choice → complete`, tell the user once: "All legacy entries have been migrated or removed. Marking the v2 migration complete."
+9. **Run Axiom 2 (Structure) silently.** Scan for files/records that violate the conventions in `references/file-based-conventions.md` or `references/notion-conventions.md`. Queue any violations as "Structure Drift: [N] items" for surfacing. Also check that all G7' audits (null-handling, Status filter, Notion saved views, external integration) are recorded for the current version; if not, surface "Structure Drift: G7' audit incomplete." Also count entries in legacy DBs (Research / Action Plans / Reference / Drafts); if count = 0 AND `migration_v2_choice` ∈ {`leave-in-place`, `walking`} → snapshot first per G2, flip `migration_v2_choice → complete`, tell the user once: "All legacy entries have been migrated or removed. Marking the v2 migration complete." Also count entries in the legacy Captain's Log; if count = 0 AND `migration_v3_choice` ∈ {`leave-in-place`, `walking`} → snapshot first per G2, flip `migration_v3_choice → complete`, tell the user once: "All Captain's Log entries have been archived or removed. Marking the v3 migration complete."
 10. **Run Stay-on-Track check.** Look at the user's calendar block right now. If there's an active event that isn't Chief-of-Staff / planning / Cowork / the Chief Name (e.g., filming, editing, meeting), give one gentle personality-matched nudge: "Your calendar says [event] — meant to hop in here?" The user can acknowledge and continue. Don't re-nudge for a calendar block they've already acknowledged.
 11. **Read the Outline.** Match the user's request to a row, load that flow, run it.
 
@@ -208,6 +210,9 @@ When talking to the user, prefer plain language. Internal terms below stay insid
 | handled | "I've taken care of this — drop from active surfacing" |
 | Awaiting Deploy | "tasks that are built but not yet shipped" |
 | Time Sensitivity | "how time-sensitive a task is on a 0–5 scale (0 = no rush, 5 = drop everything now)" |
+| Personal Journal | "your personal reflection space — mood, wins, challenges, gratitude, free thoughts. The single home for personal/reflective content (replaces Captain's Log in v3)." |
+| Personal Check-in | "a one-line prompt at the end of every brief asking if you want to journal — easy to skip, easy to engage" |
+| Graduation (PJ → SD) | "when a journal entry's free-text grows into project work, the Chief offers to also save it as a brainstorm doc — reflection stays in the journal, the project thinking moves to the working doc" |
 
 ---
 
@@ -218,7 +223,8 @@ The skill finds the user's existing data by looking for specific names. If a fut
 ### All platforms
 - Parent page / folder name: `Chief of Staff` (Notion page title) or `Chief-of-Staff/` (folder name)
 - State Dashboard: `State Dashboard` (Notion page title or `State Dashboard.md` filename)
-- Captain's Log database / folder: `Captain's Log` (Notion database title) or `Captain's Log/` (subfolder name)
+- **Personal Journal** database / folder: `Personal Journal` (Notion database title at workspace top level) or `Personal Journal/` (subfolder name under `Chief-of-Staff/`) — added v3. Replaces Captain's Log as the active personal-content home.
+- Captain's Log database / folder (LEGACY, v3): `Captain's Log` (Notion database title) or `Captain's Log/` (subfolder name) — preserved in Stable Names so existing user data is never orphaned. New writes do NOT go here. Read by `flows/recall.md` if entries exist; archived/walked through by `flows/version-migration.md` § v2→v3.
 - Domains database / folder: `Domains` (Notion database title) or `Domains/` (subfolder name)
 - Departments database / folder: `Departments` (Notion database title) or `Departments/` (subfolder name)
 - Tasks database / folder: `Tasks` (Notion database title) or `Tasks/` (subfolder name)
@@ -237,18 +243,23 @@ The skill finds the user's existing data by looking for specific names. If a fut
 ### Notion property names (on Reminders database — added v2)
 - `Name` (title), `surface_on` (date), `Recurrence` (select: `none`, `daily`, `weekly`, `monthly`, `quarterly`, `yearly`), `Project` (relation → Projects, optional), `Department` (relation → Departments, optional), `Domain` (relation → Domains, optional), `Notes` (text), `Status` (select: `active`, `snoozed`, `dismissed`), `snoozed_until` (date), `Source Item` (text — canonical identifier when created from Surfaced Items), `Linked Task` (relation → Tasks, optional), `Priority` (select: `high`, `medium`, `low`).
 
-### Notion property names (on Captain's Log database)
+### Notion property names (on Personal Journal database — added v3)
+- `Title` (title; auto-set to date if blank), `Date` (date), `Mood` (text), `Energy` (select: `low`:gray, `medium`:yellow, `high`:green), `Wins` (rich text), `Challenges` (rich text), `Gratitude` (rich text), `Notes` (rich text), `cos_id` (text — UUID).
+
+### Notion property names (on Captain's Log database — LEGACY, v3)
 - `Title` (title), `Date` (date), `Type` (select), `Project` (multi_select), `Details` (rich text)
+- Preserved in Stable Names so existing data is readable. New writes do NOT go here.
 
 ### Notion property names (on State Dashboard — key fields the skill reads)
-- `Platform`, `Chief Name`, `Personality`, `setup_status`, **`Last Seen Version`**, **`Migration v2 Choice`**, **`Legacy Plugin Choice`** — last three added v2.
-- `My Setup` section: `Name`, `Email`, `Role`, `Company`, `Chief Name`, `Personality`, `Alert Threshold`, **`last_seen_version`**, **`migration_v2_choice`**, **`legacy_plugin_choice`** — last three added v2.
+- `Platform`, `Chief Name`, `Personality`, `setup_status`, **`Last Seen Version`**, **`Migration v2 Choice`**, **`Legacy Plugin Choice`** — last three added v2. **`Migration v3 Choice`**, **`Personal Journal Location`**, **`Journal Check-in Skips`**, **`Journal Check-in Frequency`** — added v3.
+- `My Setup` section: `Name`, `Email`, `Role`, `Company`, `Chief Name`, `Personality`, `Alert Threshold`, **`last_seen_version`**, **`migration_v2_choice`**, **`legacy_plugin_choice`** — last three added v2. **`migration_v3_choice`**, **`personal_journal_location`**, **`journal_check_in_skips`** (integer, default 0), **`journal_check_in_frequency`** (`every-brief` / `weekly` / `paused`, default `every-brief`) — added v3.
 - **Surfaced Items section** (added v2): inline table with columns `Identifier`, `Surfaced On`, `State` (active / suppress-forever / suppress-this-thread / handled), `Source`, `Notes`.
 - **Filter Rules table** (existing) gains added v2 columns: `Source` (enum: `manual` / `suppress-forever` / `setup` / `migration`), `Created At` (date).
 
 ### File-based frontmatter keys (Obsidian / Logseq / plain markdown)
-- Captain's Log entries: `type: captains-log`, `date`, `log_type`, `project`
-- State Dashboard: `platform`, `chief_name`, `personality`, `setup_status`, **`last_seen_version`**, **`migration_v2_choice`**, **`legacy_plugin_choice`** — last three added v2.
+- **Personal Journal entries (added v3):** `type: personal-journal`, `date`, `mood` (optional), `energy` (optional, one of `low` / `medium` / `high`), `cos_id`, `cos: true`. Body uses markdown headers `## Wins`, `## Challenges`, `## Gratitude`, `## Notes` (any can be omitted).
+- Captain's Log entries (LEGACY, v3): `type: captains-log`, `date`, `log_type`, `project`. Preserved for existing data.
+- State Dashboard: `platform`, `chief_name`, `personality`, `setup_status`, **`last_seen_version`**, **`migration_v2_choice`**, **`legacy_plugin_choice`** — last three added v2. **`migration_v3_choice`**, **`personal_journal_location`**, **`journal_check_in_skips`**, **`journal_check_in_frequency`** — added v3.
 - Domains: `type: domain`, `description`, `status`
 - Departments: `type: department`, `domain`, `description`, `status`
 - Projects: `type: project`, `department`, `status`, `started`
@@ -257,7 +268,8 @@ The skill finds the user's existing data by looking for specific names. If a fut
 - **Reminders** (added v2): `type: reminder`, `surface_on`, `recurrence`, `project`, `department`, `domain`, `notes`, `status`, `snoozed_until`, `source_item`, `linked_task_id`, `priority`, `cos_id`.
 
 ### Logseq block properties
-- Captain's Log: `type::`, `date::`, `log-type::`, `project::`
+- Personal Journal (added v3): `type::`, `date::`, `mood::`, `energy::`, `cos-id::`, `cos::`. Sections (Wins / Challenges / Gratitude / Notes) are child blocks under each entry.
+- Captain's Log (LEGACY, v3): `type::`, `date::`, `log-type::`, `project::`
 - Domains: `type::`, `description::`, `status::`
 - Departments: `type::`, `domain::`, `description::`, `status::`
 - Tasks: `type::`, `status::`, `priority::`, `due::`, `project::`, `goal::`, `waiting-on::`, `time-sensitivity::` (added v2), `cos-id::` (added v2)
@@ -277,20 +289,22 @@ The skill finds the user's existing data by looking for specific names. If a fut
 - `flows/setup.md` — first-time setup walkthrough (S1 through S7)
 - `flows/briefing.md` — Mode A: section-by-section briefings
 - `flows/interactive.md` — Mode B: dispatcher for non-briefing requests
-- `flows/documentation-routing.md` — log / document / captain's log routing (thin pointer to `references/documentation-routing.md`)
+- `flows/documentation-routing.md` — log / document routing (thin pointer to `references/documentation-routing.md`); always asks where content goes
+- `flows/journal.md` — Personal Journal engagement (added v3): 4-pick routing (draft now / find calendar time / blank entry / suggest prompt), soft-mute frequency, graduation offer
 - `flows/task-management.md` — add/manage tasks, queries, status changes
 - `flows/reminders.md` — Reminder CRUD, snooze, dismiss, convert, fuzzy-match-on-create (added v2)
 - `flows/file-cabinet.md` — smart nesting, dangling records
 - `flows/watcher-setup.md` — phased rollout of automatic background scans
-- `flows/recall.md` — cross-system recall across Captain's Log / Supporting Documents / Briefings (renamed from `flows/captains-log-recall.md` in v2)
-- `flows/version-migration.md` — v2 migration offer + cross-plugin detection (added v2)
+- `flows/recall.md` — cross-system recall across Personal Journal / Supporting Documents / Briefings (also reads legacy Captain's Log if entries exist). Renamed from `flows/captains-log-recall.md` in v2; queries updated for Personal Journal in v3.
+- `flows/version-migration.md` — v1→v2 + v2→v3 migration offers + cross-plugin detection (added v2; v3 migration added v3)
 - `flows/alerts.md` — Step 3 alert cascade
 
 **References (loaded only when a flow needs them):**
 - `references/personality.md` — tone rules per personality type (loaded every session in Bootstrap step 5)
 - `references/signal-filters.md` — what to surface vs skip, priority ranking, user-defined filter rules, Surfaced Items state check, Time Sensitivity composite, per-source read budget
 - `references/platform-choice.md` — guided flow for picking Obsidian / Logseq / plain markdown / Notion (loaded during setup S1.5)
-- `references/captains-log.md` — Captain's Log schema, platform-specific storage, recall queries
+- `references/personal-journal.md` — Personal Journal schema (Date / Mood / Energy / Wins / Challenges / Gratitude / Free text), platform-specific storage, first-use creation, graduation rule (added v3)
+- `references/captains-log.md` — LEGACY (v3): Captain's Log schema, platform-specific storage. Read by `flows/recall.md` if entries exist. Not referenced by any v3 write paths.
 - `references/documentation-routing.md` — Type decision tree for Supporting Documents, graduation rule (Idea ↔ brainstorm), Type-transition rules, legacy DB read rule, canonical tag list + normalization (added v2)
 - `references/watcher-playbook.md` — every scheduled agent, schedule, prompt, write boundaries; Weekly Review hooks for Awaiting Deploy / stale prep / stale brainstorm / cross-system summary (added v2)
 - `references/rollout-reminder.md` — Pacer pattern: rollout nudge logic, Express Lane, snooze, rollback

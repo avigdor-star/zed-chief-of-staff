@@ -1,13 +1,14 @@
 # Flow: Recall (Cross-System)
 
-**What this flow does:** Queries Captain's Log, Supporting Documents, and Briefings for entries matching a user request. Returns matches interleaved by date with source annotation. Replaces the v1 `flows/captains-log-recall.md` (renamed in v2 — see SKILL.md G7 migration note).
+**What this flow does:** Queries Personal Journal, Supporting Documents, and Briefings for entries matching a user request. Also reads legacy Captain's Log entries if any exist (preserved across v3 migration). Returns matches interleaved by date with source annotation. Replaces the v1 `flows/captains-log-recall.md` (renamed in v2; queries updated for Personal Journal in v3).
 
-**When to load it:** User asks recall questions like "what did I log about X," "show me my wins," "what did I decide about Y," "pull up anything tagged [project]," "what have I written about X," "what did I think about X," "show me my personas," "pull up my drafts," any Tag-filtered query.
+**When to load it:** User asks recall questions like "what did I journal about X," "show me my wins," "what did I decide about Y," "pull up anything tagged [project]," "what have I written about X," "what did I think about X," "show me my personas," "pull up my drafts," "when did I feel overwhelmed," any Tag-filtered query, any mood-filtered query.
 
-**Prerequisites:** Bootstrap complete. Captain's Log exists (created during setup S4.5). Supporting Documents may or may not exist depending on user's setup state. Briefings exist after the first briefing.
+**Prerequisites:** Bootstrap complete. Personal Journal may or may not exist (auto-created on first journal use). Captain's Log may or may not exist (legacy — preserved across v3 migration). Supporting Documents may or may not exist depending on user's setup state. Briefings exist after the first briefing.
 
 For schema details:
-- Captain's Log → `references/captains-log.md`
+- Personal Journal → `references/personal-journal.md`
+- Captain's Log (LEGACY, v3) → `references/captains-log.md`
 - Supporting Documents → `references/documentation-routing.md` (Type tree, canonical tags) + `references/notion-conventions.md` / `references/file-based-conventions.md`
 - Briefings → `references/notion-conventions.md` / `references/file-based-conventions.md`
 
@@ -19,9 +20,10 @@ If the user's question targets one system, query just that one. Don't expand the
 
 | Pattern | Where |
 |---------|-------|
-| "Show me my wins" / "what did I decide about X" / "captain's log entries about Y" | Captain's Log only |
+| "Show me my wins" / "when did I feel [X]" / "my journal entries about [topic]" / "personal journal entries from [period]" | Personal Journal (also queries legacy Captain's Log if entries exist) |
 | "Show me my personas" / "pull up my drafts" / "my brainstorms about X" | Supporting Documents only |
 | "What was in last week's briefing" / "find that briefing about X" | Briefings only |
+| "Captain's log entries about Y" (legacy phrasing) | Captain's Log only (legacy) — also offer: "These are legacy entries — your new entries live in Personal Journal." |
 
 ---
 
@@ -31,7 +33,8 @@ If the user's question is open-ended ("what have I written about X" / "what did 
 
 ### Search rules
 
-- **Captain's Log:** full-text on Title + Details, plus optional Type / Project / Date filters.
+- **Personal Journal:** full-text on all body sections (Wins / Challenges / Gratitude / Notes), plus optional Mood / Energy / Date filters. Mood is text — use partial match (e.g. "anxious" matches "anxious," "feeling anxious," "a bit anxious").
+- **Captain's Log (LEGACY, v3):** full-text on Title + Details, plus optional Type / Project / Date filters. Surfaced with `[legacy CL]` annotation. Only queried if the legacy structure exists with entries.
 - **Supporting Documents:** full-text on Name + body/Notes, plus Tag filter (normalized per `references/documentation-routing.md`), plus Related Projects / Related Departments / Related Tasks relations.
 - **Briefings:** full-text on body. Briefings are dated; sort surfaces by Date.
 
@@ -51,18 +54,19 @@ Before matching a Tag-filtered query against Supporting Documents:
 For each matching entry, return:
 
 - **Date**
-- **Source annotation** — `[Captain's Log]`, `[Supporting Doc]`, or `[Briefing]`. Add `[legacy]` prefix if the entry is in a legacy DB (Research / Action Plans / Reference / Drafts).
-- **Title / Name**
-- **Type** (for Captain's Log: Milestone / Decision / Win / etc. For Supporting Documents: brainstorm / prep / analysis / plan / artifact)
-- **One-line snippet** from Details / body — first sentence or so
+- **Source annotation** — `[Journal]`, `[legacy CL]` (legacy Captain's Log), `[Supporting Doc]`, or `[Briefing]`. Add `[legacy]` prefix if the entry is in a v2-legacy DB (Research / Action Plans / Reference / Drafts).
+- **Title / Name** — for Personal Journal entries with no explicit title, use the date.
+- **Type / Mood** — for Personal Journal: Mood if present (e.g., `mood: calm`). For Captain's Log (legacy): Type (Milestone / Decision / Win / etc.). For Supporting Documents: Type (brainstorm / prep / analysis / plan / artifact).
+- **One-line snippet** from body — first sentence or so
 
 Format as a compact list, sorted by Date descending. Cross-system queries interleave all sources.
 
 Example:
 
 ```
+2026-04-27  [Journal]        mood: anxious — pre-launch jitters before the v3 ship
 2026-04-26  [Supporting Doc] Brainstorm — Pricing Strategy
-2026-04-22  [Captain's Log]  Decision — Switched to per-seat pricing
+2026-04-22  [legacy CL]      Decision — Switched to per-seat pricing
 2026-04-15  [Briefing]       Top 3 included pricing review
 2026-04-10  [legacy] [Research] Competitor pricing scan
 ```
@@ -73,18 +77,33 @@ If nothing matches, say so plainly: "Nothing matches that. Want me to broaden th
 
 ---
 
-## Captain's Log Idea graduation offer (during recall)
+## Graduation offers during recall (v3)
 
-When the result set includes a Captain's Log Idea entry that has grown to multi-paragraph AND the topic ties to an active Project, offer once per recall (not per item):
+Two graduation patterns can fire during recall — at most one per recall (G9 conflict-detection):
 
-> "This Idea looks like it's grown — graduate to a Supporting Document brainstorm under [Project]?"
+### Personal Journal Free Text → Supporting Document brainstorm
+
+When the result set includes a Personal Journal entry whose Notes / Free Text section is multi-paragraph AND mentions an active Project, offer once per recall:
+
+> "This journal entry's free text reads like project work for [Project] — graduate to a Supporting Document brainstorm under that project? (The journal entry stays intact with a pointer.)"
 
 If the user says yes:
+1. Create a new Supporting Document with `Type = brainstorm`, copy the Notes / Free Text content into the body.
+2. Add a one-line pointer in the journal entry's Notes section: "Graduated to [link to SD] on [date]."
+3. Confirm: "Graduated. Reflection stays in your journal; project thinking lives in the Supporting Doc."
+
+### Legacy Captain's Log Idea → Supporting Document brainstorm
+
+When the result set includes a legacy Captain's Log Idea entry that has grown to multi-paragraph AND the topic ties to an active Project, offer once per recall:
+
+> "This Captain's Log Idea looks like it's grown — graduate to a Supporting Document brainstorm under [Project]? (Legacy entry stays intact with a pointer.)"
+
+If yes:
 1. Create a new Supporting Document with `Type = brainstorm`, copy the Idea's content into Notes / body.
 2. Set the original Captain's Log entry's Details to a one-line note: "Graduated to [link to new SD] on [date]." Don't delete the original — preserve history.
-3. Confirm: "Graduated. Original entry kept with a pointer."
+3. Confirm: "Graduated. Original legacy entry kept with a pointer."
 
-If declined, don't push.
+If declined on either, don't push.
 
 ---
 
@@ -99,7 +118,7 @@ Per `references/documentation-routing.md` § Legacy DB read rule:
 
 ## What this flow does NOT do
 
-- Does NOT write to Captain's Log, Supporting Documents, or Briefings (writes are handled by `flows/documentation-routing.md` and the briefing flow).
+- Does NOT write to Personal Journal, Captain's Log, Supporting Documents, or Briefings (writes are handled by `flows/journal.md`, `flows/documentation-routing.md`, and the briefing flow).
 - Does NOT snapshot the State Dashboard. Recall is a read; G2 doesn't apply.
 - Does NOT hard-archive entries during recall. Archival is `Tag = archived` (Supporting Documents) or status-based (Tasks).
 

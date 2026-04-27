@@ -14,7 +14,7 @@ All Chief of Staff content lives under a single parent page in the user's Notion
 
 ```
 Chief of Staff                       ← parent page (top-level)
-├── State Dashboard                  ← page (page-level properties: Last Session At, setup_status, Last Seen Version, Migration v2 Choice, Legacy Plugin Choice)
+├── State Dashboard                  ← page (page-level properties: Last Session At, setup_status, Last Seen Version, Migration v2 Choice, Migration v3 Choice, Legacy Plugin Choice, Personal Journal Location, Journal Check-in Skips, Journal Check-in Frequency)
 ├── Live Feed                        ← page
 ├── Snapshots                        ← page (holds state-snapshot-* page duplicates)
 ├── 🌐 Domains                       ← database (top of hierarchy: life entities — e.g., Business A, Personal)
@@ -30,6 +30,10 @@ Chief of Staff                       ← parent page (top-level)
 ├── 📋 Action Plans                  ← database (LEGACY in v2 — read-only; new entries go to Supporting Documents)
 ├── 📎 Reference                     ← database (LEGACY in v2 — read-only; new entries go to Supporting Documents)
 └── 📁 Archive Views (optional)      ← page of linked views showing `Status = archived` across databases
+
+Workspace top level (NOT under Chief of Staff parent — kept independent):
+├── 🪞 Personal Journal              ← database (added v3 — auto-created on first journal use; mood / energy / wins / challenges / gratitude / notes)
+└── 📓 Captain's Log                 ← database (LEGACY in v3 — read-only; preserved for users with v1/v2 entries; new reflective content goes to Personal Journal)
 ```
 
 **Legacy DB read rule.** The four legacy databases (Research / Drafts / Action Plans / Reference) are still read by briefing source-scan and recall queries — entries are tagged `[legacy]` in surfaced output. New entries always go to Supporting Documents. See `references/documentation-routing.md` § Legacy DB read rule.
@@ -303,6 +307,43 @@ Date-scoped surfacing nudges. Distinct from Tasks (work to do). Sits sideways �
 - "Snoozed" — filter `Status = snoozed`.
 - "Dismissed" — filter `Status = dismissed` (history view).
 - "Upcoming (7 days)" — filter `Status = active AND surface_on between today and today+7d` (used by lookahead).
+
+### Personal Journal database (added v3 — workspace top level, NOT under CoS parent)
+
+Personal reflection space. Auto-created on first use (NOT during setup S4). Located at workspace top level so the user can find it independently — same pattern Captain's Log used in v1/v2. Schema and full storage details in `references/personal-journal.md`.
+
+| Property | Type | Purpose |
+|----------|------|---------|
+| Title | Title | Auto-set to date string if blank (e.g., `2026-04-27`) |
+| Date | Date | Date the entry is for (default today) |
+| Mood | Text | Free text — one word or short phrase. No fixed list. |
+| Energy | Select | `low`:gray / `medium`:yellow / `high`:green. Optional. |
+| Wins | Rich Text | What went well. Optional. |
+| Challenges | Rich Text | What was hard. Optional. |
+| Gratitude | Rich Text | What user is grateful for. Optional. |
+| Notes | Rich Text | Free-text "open page." Optional. |
+| cos_id | Text | UUID for cross-system identity (per v2 cos_id pattern). |
+
+**Saved view recommendations (default views, created on auto-create at first use):**
+- "Recent" — filter Date within last 30 days, sort Date descending. Default view.
+- "By Mood" — group by Mood (text-grouped, sorted alphabetically).
+- "By Month" — group by Date by month (Notion native grouping).
+
+**Briefing source-scan rule:** Personal Journal is NOT scanned during briefings. Recall via `flows/recall.md` if needed.
+
+### Captain's Log database (LEGACY in v3 — workspace top level, read-only)
+
+Preserved for users with v1/v2 entries. New reflective content goes to Personal Journal (auto-created on first use). Schema unchanged from v2:
+
+| Property | Type | Purpose |
+|----------|------|---------|
+| Title | Title | |
+| Date | Date | |
+| Type | Select | `Milestone` / `Decision` / `Win` / `Learning` / `Problem` / `Idea` |
+| Project | Multi-select | Active Projects from Dashboard, plus `Personal` and `Other` |
+| Details | Rich Text | |
+
+**Read-only in v3.** Recall queries (`flows/recall.md`) still surface entries here, tagged `[legacy CL]`. The v2→v3 migration in `flows/version-migration.md` offers move-all (archive) / leave-in-place / walking.
 
 ### People database
 
