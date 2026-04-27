@@ -319,7 +319,12 @@ WEEKLY REVIEW — Scheduled Agent (Desktop)
 2. Analyze: what moved, what stalled, patterns, risks, accomplishments.
 3. Save weekly summary to Briefings/YYYY-MM-DD-weekly-review.md (use template).
 4. Snapshot State Dashboard (in-vault rollback copy, per the standard snapshot-first gate), then update project statuses, watch list, system health.
-5. Post weekly summary to main messaging channel (if connected).
+5. v2 hooks (added v2 — read-only against source DBs; surface findings into the weekly summary):
+   a. **Awaiting Deploy summary.** List all Tasks where Status = not-deployed, grouped by Project, with how long each has been in not-deployed. Add to weekly summary: "[N] items awaiting deploy. Anything ready to ship?"
+   b. **Stale prep docs.** Find Supporting Documents where Type = prep AND associated meeting/event date is 7+ days past. Add: "[N] stale prep docs from past meetings. Convert to artifact, archive, or leave?"
+   c. **Stale brainstorms.** Find Supporting Documents where Type = brainstorm AND no edits in 30+ days AND no graduation event recorded. Add: "[N] brainstorms haven't moved in a month. Want to graduate, archive, or revisit?"
+   d. **Cross-system summary per active Project.** For each active Project, list top 3 most-recent items across Captain's Log + Supporting Documents + Briefings. Add as a per-project block in the weekly summary.
+6. Post weekly summary to main messaging channel (if connected).
 --------------------------------------------------
 ```
 
@@ -334,7 +339,11 @@ MONTHLY CLEANUP — Scheduled Agent (Desktop)
    resolved missed messages, open decisions older than 30 days.
 3. Run memory consolidation on life context and recent journal entries (if they exist).
 4. Check Live Feed size — if >200 lines, archive HANDLED entries.
-5. Save monthly summary to Briefings/YYYY-MM-monthly-cleanup.md.
+5. v2 hooks (added v2):
+   a. **Surfaced Items TTL.** Drop Surfaced Items entries with state = handled and Surfaced On > 30 days ago. Snapshot State Dashboard first per G2.
+   b. **Quarterly v2 migration re-prompt** — fires only on the third Monday-Cleanup run of every quarter (months 3 / 6 / 9 / 12). If migration_v2_choice ∈ {leave-in-place, walking}, surface: "Quarterly check — your legacy entries from the v2 migration are still in place. Revisit?" (yes / not now / never ask again). On "never ask again," set migration_v2_choice = leave-permanent (snapshot first per G2).
+   c. **Tag promotion offer.** If any non-canonical tag has been used 3+ times across Supporting Documents, offer: "You've used the tag '[X]' [N] times — promote to a canonical tag?" If yes, surface a one-line edit suggestion to the user (cos-dev applies the actual edit to references/documentation-routing.md).
+6. Save monthly summary to Briefings/YYYY-MM-monthly-cleanup.md.
 --------------------------------------------------
 ```
 

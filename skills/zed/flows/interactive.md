@@ -12,16 +12,19 @@
 
 - **Quick tasks** (draft, lookup, simple answer) → handle directly.
 - **Medium tasks** (<5 min of work) → hand off to a background helper (sub-agent) with context from the State Dashboard.
-  - Research → save to the Research folder/database (per the chosen platform's conventions)
-  - Drafts → save to the Drafts folder/database
-  - Action plans → save to the Action-Plans folder/database
+  - Research → save to the Supporting Documents folder/database with `Type = analysis, Tag = research` (per `references/documentation-routing.md`)
+  - Drafts → save to Supporting Documents with `Type = artifact, Tag = draft`
+  - Action plans → save to Supporting Documents with `Type = plan, Tag = action-plan`
+  - Brainstorms / prep notes / personas / frameworks → save to Supporting Documents with the matching Type from the decision tree
   - Bug investigation → use the `bugfix-protocol` skill if available
   - Code review → use the `code-health-review` skill if available
 - **Big tasks** (>5 min) → suggest a fresh Cowork session.
 
-**All output documents must follow the conventions for the chosen platform** — see `references/file-based-conventions.md` (Obsidian / Logseq / markdown folder) or `references/notion-conventions.md` (Notion).
+**All output documents must follow the conventions for the chosen platform** — see `references/file-based-conventions.md` (Obsidian / Logseq / markdown folder) or `references/notion-conventions.md` (Notion). Type inference and graduation rules in `references/documentation-routing.md`.
 
-After a helper finishes: update the State Dashboard and link the new document back to the briefing/project that requested it. File-based vaults use `[[wikilinks]]`; Notion uses Relation properties.
+**Legacy folders/databases** (Research / Drafts / Action-Plans / Reference) are read-only in v2. Never write new entries there — always route to Supporting Documents.
+
+After a helper finishes: update the State Dashboard and link the new document back to the briefing/project that requested it. File-based vaults use `[[wikilinks]]` plus the Supporting Doc's `cos_id`; Notion uses Relation properties.
 
 ---
 
@@ -29,11 +32,13 @@ After a helper finishes: update the State Dashboard and link the new document ba
 
 | If the user's request is about… | Hand off to |
 |---|---|
-| Adding/managing tasks (add a task, mark done, what's on my plate, what's blocked, move task to project) | `flows/task-management.md` |
+| Adding/managing tasks (add a task, mark done, what's on my plate, what's blocked, move task to project, awaiting deploy) | `flows/task-management.md` |
+| Setting / managing reminders (set a reminder, remind me to/about, snooze, dismiss, what reminders) | `flows/reminders.md` |
 | Smart nesting / a new domain or department / dangling records / file cabinet structure | `flows/file-cabinet.md` |
 | Setting up watchers / Phase 1 / Express Lane | `flows/watcher-setup.md` |
-| Captain's Log recall ("what did I log about X", "show me my wins", "what did I decide about Y") | `flows/captains-log-recall.md` |
+| Recall ("what did I log about X", "show me my wins", "what have I written about Y", "show me my personas", "pull up my drafts", any cross-system query) | `flows/recall.md` |
 | A quick documentation phrase ("log this", "document this", "captain's log", "remember this", "journal that", etc.) | `flows/documentation-routing.md` |
+| Version mismatch detected at Bootstrap, OR cross-plugin detection prompt | `flows/version-migration.md` |
 
 If the request fits one of those rows, hand off and stop reading this file.
 
@@ -55,6 +60,21 @@ Snapshot first (G2), then update State Dashboard immediately. Confirm.
 
 ### Connector updates
 "I connected [tool]" or "update my connectors" → re-run connector detection (same as setup S3) and update the Connectors table in the State Dashboard. Snapshot first (G2).
+
+### Surfaced Items verbs (added v2)
+
+When the user marks an item that surfaced in a brief, route through these verbs. Always compute the canonical identifier (per `references/signal-filters.md`) for the item before writing.
+
+- **"Suppress that"** (or "drop that," "stop showing me that"): ask if missing — "Forever (kills all future matches by sender / domain / topic via a Filter Rule) or just this thread (suppresses this specific identifier only)?"
+  - **Forever** → snapshot State Dashboard (G2). Add a Filter Rule with `Source = suppress-forever`, `Created At = today`, plus the matched pattern. Confirm: "Filter Rule added. You can see it under Filter Rules and reverse with 'show me what I've suppressed.'"
+  - **This thread** → snapshot (G2). Add to Surfaced Items with `State = suppress-this-thread`, identifier, surfaced-on date, source, notes. Confirm.
+- **"Mark handled"** / "I've handled that" / "done with that" → snapshot (G2). Add to Surfaced Items with `State = handled`. TTL: drops from the table after 30 days (Monthly Cleanup). Confirm.
+- **"Remind me later about that"** → routes to `flows/reminders.md`. Pre-fill the new Reminder's `Source Item` with the canonical identifier so the reminder links back. Ask the user when to surface — handle specific date ("June 15"), relative phrase ("early next week," "after my trip"), or vague punt ("later" → default 7 days, tell user). Don't add to Surfaced Items state — the Reminder system handles the resurface.
+- **"Show me what I've suppressed"** → list:
+  - Surfaced Items entries where `State` ∈ {`suppress-forever`, `suppress-this-thread`} (with date and source).
+  - Filter Rules entries where `Source = suppress-forever` (with pattern, match type, created date).
+  - Each line with a one-tap un-suppress affordance.
+- **"Un-suppress [item]"** / "show me [item] again" → snapshot (G2 — un-suppress writes to State Dashboard). For Surfaced Items: flip `State` to `active`. For Filter Rules: remove the rule. Confirm: "[item] is back in your briefings."
 
 ### Anything else
 Use judgment. Apply Universal Gates. When in doubt, ask.

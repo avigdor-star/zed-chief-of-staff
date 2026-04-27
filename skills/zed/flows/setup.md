@@ -118,23 +118,21 @@ Branch on the platform chosen in S1.5.
 
 ### If platform = `obsidian`, `logseq`, or `markdown-folder`
 
-Create the `Chief-of-Staff/` folder in the user's vault with:
+Create the `Chief-of-Staff/` folder in the user's vault with (v2 — adds Supporting-Documents and Reminders; the legacy folders Research / Drafts / Action-Plans / Reference are NOT created for new users):
 
 ```
 Chief-of-Staff/
 ├── _index.md                ← One-screen map; write this FIRST (template in file-based-conventions.md)
-├── State Dashboard.md
+├── State Dashboard.md       ← Includes Surfaced Items + Filter Rules sections (v2)
 ├── Live Feed.md
-├── Domains/                 ← One file per life domain
-├── Departments/             ← One file per department
-├── Projects/                ← One subfolder per active project
-├── Tasks/                   ← One file per task
+├── Domains/
+├── Departments/
+├── Projects/
+├── Tasks/                   ← Tasks now include time_sensitivity + cos_id frontmatter (v2)
+├── Supporting-Documents/    ← Added v2 — absorbs Research / Drafts / Action-Plans / Reference via Type field
+├── Reminders/               ← Added v2 — date-scoped surfacing nudges
 ├── Briefings/
-├── Research/
-├── Drafts/
-├── Action-Plans/
 ├── People/
-├── Reference/
 └── Archive/
 ```
 
@@ -142,32 +140,32 @@ Write `_index.md` first — it's the contract every future session reads. **Guar
 
 ### If platform = `notion`
 
-Use the Notion connector to create under a single parent page named **Chief of Staff**:
+Use the Notion connector to create under a single parent page named **Chief of Staff** (v2 — adds Supporting Documents and Reminders databases; legacy databases NOT created for new users):
 
 ```
 Chief of Staff (parent page)
-├── State Dashboard (page)
+├── State Dashboard (page)            ← Page-level properties: Last Session At, setup_status, Last Seen Version, Migration v2 Choice, Legacy Plugin Choice
 ├── Live Feed (page)
-├── Snapshots (page)              ← page-snapshots live here
+├── Snapshots (page)
 ├── Domains (database)
 ├── Departments (database)
 ├── Projects (database)
-├── Tasks (database)
+├── Tasks (database)                  ← Includes Time Sensitivity property; Status options include not-deployed (v2)
+├── Supporting Documents (database)   ← Added v2
+├── Reminders (database)              ← Added v2
 ├── Briefings (database)
-├── Research (database)
-├── Drafts (database)
-├── Action Plans (database)
-├── People (database)
-└── Reference (database)
+└── People (database)
 ```
 
-For each database, create properties and templates per `references/notion-conventions.md`. Lay out the State Dashboard and Live Feed per the sections in that file.
+For each database, create properties and templates per `references/notion-conventions.md`. Lay out the State Dashboard (with the new Surfaced Items section + Filter Rules provenance columns) and Live Feed per the sections in that file. For Tasks, set up the Notion saved views audit per `references/notion-conventions.md` § Tasks database (Active Tasks view excludes `not-deployed`; new "Awaiting Deploy" view filters to `Status = not-deployed`).
 
-After creating databases, populate Domains and Departments with the entries from S2. For each domain, create one record. For each department, create one record and link to its domain. Leave Projects and Tasks empty.
+After creating databases, populate Domains and Departments with the entries from S2. For each domain, create one record. For each department, create one record and link to its domain. Leave Projects, Tasks, Supporting Documents, and Reminders empty.
 
 > **Note:** `Chief-of-Staff/State Dashboard.md` is NOT a copy-paste template for the Notion State Dashboard page. The Notion page is built from Notion blocks — headings, callouts, two-column tables, embedded linked-database views — not from markdown. Use the schema in `notion-conventions.md` as the source of truth for the Notion layout.
 
-> **Expected after setup:** all eleven databases will be mostly empty — Domains and Departments are pre-populated from S2, everything else fills up as the system runs. Reassure the user of this before handing off from S4.
+> **Expected after setup:** all databases will be mostly empty — Domains and Departments are pre-populated from S2, everything else fills up as the system runs. Reassure the user of this before handing off from S4.
+
+> **Existing v1 users (post-update):** if a Chief of Staff parent already exists with the v1 structure, do NOT recreate. The version-migration flow (`flows/version-migration.md`) handles adding the new v2 databases and migrating legacy entries based on the user's choice. Setup S4 is for first-time setup only.
 
 ---
 
@@ -201,6 +199,10 @@ Fill in the State Dashboard from S2 answers, following the conventions file for 
 
 Fill in:
 - **My Setup** (name, email, role, company, alert threshold, chief name, personality, **platform — must match the pick from S1.5**, `setup_status` — set to `complete` at end of S6, or `complete-with-warning` if backup was deferred)
+- **Version fields (v2 — new users skip migration entirely):**
+  - `last_seen_version` = the current version from SKILL.md's Skill Version section (e.g., `v2`).
+  - `migration_v2_choice` = `complete` (new users have no legacy entries to migrate).
+  - `legacy_plugin_choice` = blank (Bootstrap step 7 detection handles this if the older plugin is installed).
 - **Active Projects** (from project list)
 - **High-Priority People** (from key people list)
 - **This Week's Focus** (from priorities)
@@ -210,6 +212,8 @@ Fill in:
 - **Watch List** → empty, note: "Tell me to 'keep an eye on' something and it goes here."
 - **Open Decisions** → empty, note: "Decisions needing your input will appear here."
 - **Missed Messages** → empty (will fill as the system learns)
+- **Surfaced Items** (added v2) → empty, note: "When I show you items in briefings, you can mark them suppress / handled / remind-later. Marked items appear here."
+- **Filter Rules** (existing — gains v2 columns) → empty, with column headers `Pattern`, `Match Type`, `Source`, `Created At`.
 - **Session anchor (platform-aware):**
   - `obsidian` / `logseq` / `markdown-folder`: set `last_updated:` in the State Dashboard's frontmatter to today's date.
   - `notion`: add a `Last Session At` date property to the State Dashboard page (NOT the built-in `Last edited`, which would update on every agent edit and make the anchor unreliable) and set it to today.

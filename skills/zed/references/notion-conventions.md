@@ -14,21 +14,25 @@ All Chief of Staff content lives under a single parent page in the user's Notion
 
 ```
 Chief of Staff                       ← parent page (top-level)
-├── State Dashboard                  ← page (has page-level properties: Last Session At, setup_status)
+├── State Dashboard                  ← page (page-level properties: Last Session At, setup_status, Last Seen Version, Migration v2 Choice, Legacy Plugin Choice)
 ├── Live Feed                        ← page
 ├── Snapshots                        ← page (holds state-snapshot-* page duplicates)
 ├── 🌐 Domains                       ← database (top of hierarchy: life entities — e.g., Business A, Personal)
 ├── 🏢 Departments                   ← database (functional areas within a domain — e.g., Marketing, Health)
 ├── 🚀 Projects                      ← database (specific initiatives within a department)
-├── ✅ Tasks                          ← database (actionable to-dos within a project)
+├── ✅ Tasks                          ← database (gains Time Sensitivity property + not-deployed Status option in v2)
 ├── 📚 Briefings                     ← database
-├── 🔍 Research                      ← database
-├── ✉️ Drafts                         ← database
-├── 📋 Action Plans                  ← database
+├── 📂 Supporting Documents          ← database (added v2 — absorbs Research / Drafts / Action Plans / Reference via Type field)
+├── ⏰ Reminders                     ← database (added v2 — date-scoped surfacing nudges, parallel to Tasks)
 ├── 👤 People                        ← database
-├── 📎 Reference                     ← database
+├── 🔍 Research                      ← database (LEGACY in v2 — read-only; new entries go to Supporting Documents)
+├── ✉️ Drafts                         ← database (LEGACY in v2 — read-only; new entries go to Supporting Documents)
+├── 📋 Action Plans                  ← database (LEGACY in v2 — read-only; new entries go to Supporting Documents)
+├── 📎 Reference                     ← database (LEGACY in v2 — read-only; new entries go to Supporting Documents)
 └── 📁 Archive Views (optional)      ← page of linked views showing `Status = archived` across databases
 ```
+
+**Legacy DB read rule.** The four legacy databases (Research / Drafts / Action Plans / Reference) are still read by briefing source-scan and recall queries — entries are tagged `[legacy]` in surfaced output. New entries always go to Supporting Documents. See `references/documentation-routing.md` § Legacy DB read rule.
 
 **Three things called "archive" / "snapshot" — keep straight:**
 - `Status = archived` on a database record → cleanup/lifecycle state (see "Archive strategy").
@@ -53,13 +57,18 @@ Use Notion headings + callouts + embedded database views. The page is laid out a
 - **Page-level properties** (set on the page itself, not in a sub-table — these are accessed as Notion page properties so the Chief and watchers can read them via the API without parsing the page body):
   - `Last Session At` (Date) — set by the Chief at the end of every session. The "since last session" anchor for the Monday rule. Do NOT rely on Notion's built-in `Last edited` field — it bumps every time anything writes to the page (including watchers, the Health Check, the Weekly Review, manual edits) and would give a wildly wrong window.
   - `setup_status` (Select: `in_progress` / `complete` / `complete-with-warning`) — set during setup. `complete-with-warning` means S6 backup was deferred and Axiom 1 should keep nudging.
-- **## My Setup** → a simple two-column table (or a set of inline mentions). Fields: Name, Email, Role, Company/Team, Chief Name, **Personality** (one of: `Professional`, `Playful & lighthearted`, `Dry wit`, `Warm & encouraging`, or a custom description; defaults to `Professional` if blank), Alert Threshold, **Platform** (always `notion` for this schema).
+  - `Last Seen Version` (Text, added v2) — the canonical version the user last completed migration through (e.g., `v1`, `v2`). Bootstrap step 3 compares this to SKILL.md's `Current:` value.
+  - `Migration v2 Choice` (Select, added v2): `moved` / `leave-in-place` / `leave-permanent` / `walking` / `complete`. Tracks what the user picked when prompted by `flows/version-migration.md`.
+  - `Legacy Plugin Choice` (Select, added v2): `uninstalled` / `dismissed` / `permanent`. Tracks what the user picked for the cross-plugin detection prompt.
+- **## My Setup** → a simple two-column table (or a set of inline mentions). Fields: Name, Email, Role, Company/Team, Chief Name, **Personality** (one of: `Professional`, `Playful & lighthearted`, `Dry wit`, `Warm & encouraging`, or a custom description; defaults to `Professional` if blank), Alert Threshold, **Platform** (always `notion` for this schema). Mirror copies of the new v2 fields above can also live here for human visibility, but the page-level properties are the authoritative source the Chief reads.
 - **## Active Projects** → an embedded linked view of the Projects database, filtered to `Status = active`, grouped by Department.
 - **## Tasks Due** → an embedded linked view of the Tasks database, filtered to `Status != done AND Status != cancelled`, sorted by Due Date ascending. Shows what's on the plate right now.
 - **## High-Priority People** → an embedded linked view of the People database, filtered to `Priority = high`.
 - **## Watch List** → a bulleted list inside a toggle block. Each bullet is a short item. (A database is overkill here.)
 - **## Missed Messages** → bulleted list inside a toggle.
 - **## Open Decisions** → bulleted list inside a toggle.
+- **## Surfaced Items** (added v2) → an inline table tracking briefing items the user has marked. Columns: `Identifier` (canonical ID per `references/signal-filters.md`), `Surfaced On` (date), `State` (select: `active` / `suppress-forever` / `suppress-this-thread` / `handled`), `Source` (which brief section it came from), `Notes`. Default state for new entries is `active`. Items in any non-active state are dropped from briefings (G3 + Surfaced Items state check). `handled` items archive after 30 days.
+- **## Filter Rules** (existing — gains v2 columns) → table of patterns to silently drop. Columns: `Pattern`, `Match Type` (sender / domain / company / topic), `Source` (added v2 — Select: `manual` / `suppress-forever` / `setup` / `migration`), `Created At` (added v2 — Date). The `Source` enum lets the user audit and reverse Filter Rules created via "suppress forever" using the un-suppress verb (see `flows/interactive.md`).
 - **## This Week's Focus** → free text, updated weekly.
 - **## Weekly Trends** → free text, auto-updated by the Weekly Review routine.
 - **## Automation Status** → a simple inline table with Phase / Week / Component / Status columns. (Not a database — this never grows.)
@@ -129,7 +138,9 @@ Mirrors `Briefings/` folder.
 
 **Body of each record:** the full briefing content — Yesterday's Carryover, Today's Top 3, Schedule, Messages, Watch List, Risks, Recommended Actions.
 
-### Research database
+### Research database (LEGACY in v2 — read-only)
+
+> **Status:** Legacy. v2 absorbed Research into Supporting Documents (Type = `analysis`, Tag = `research`). This database is read by briefing source-scan and recall — entries are tagged `[legacy]` in surfaced output. Do NOT create new entries here in v2 — route to Supporting Documents instead. See `references/documentation-routing.md` § Legacy DB read rule.
 
 Mirrors `Research/` folder.
 
@@ -143,7 +154,9 @@ Mirrors `Research/` folder.
 
 **Body:** Question, Findings, Recommendation.
 
-### Drafts database
+### Drafts database (LEGACY in v2 — read-only)
+
+> **Status:** Legacy. v2 absorbed Drafts into Supporting Documents (Type = `artifact`, Tag = `draft`). Read-only as above.
 
 Mirrors `Drafts/` folder.
 
@@ -158,7 +171,9 @@ Mirrors `Drafts/` folder.
 
 **Body:** the actual draft text.
 
-### Action Plans database
+### Action Plans database (LEGACY in v2 — read-only)
+
+> **Status:** Legacy. v2 absorbed Action Plans into Supporting Documents (Type = `plan`, Tag = `action-plan`). Read-only as above.
 
 Mirrors `Action-Plans/` folder.
 
@@ -223,9 +238,10 @@ Fourth level — the actual to-dos. Every task belongs to a project. Through tha
 | Property | Type | Purpose |
 |----------|------|---------|
 | Name | Title | Task name — a clear action (e.g., "Reply to vendor quote", "Schedule annual physical") |
-| Status | Select | `to-do` / `in-progress` / `blocked` / `done` / `cancelled` |
+| Status | Select | `to-do` / `in-progress` / `blocked` / `done` / `cancelled` / **`not-deployed`** (added v2) |
 | Priority | Select | `urgent` / `high` / `medium` / `low` |
 | Due Date | Date | When it's due (optional — not every task has a deadline) |
+| **Time Sensitivity** (added v2) | Number | 0–5 scale for intuitive urgency. See `references/signal-filters.md` for anchors and the composite ranking formula. |
 | Project | Relation → Projects | Which project this belongs to |
 | Goal | Text | Optional — what outcome this task serves (for alignment without adding a 5th hierarchy level) |
 | Notes | Text | Context, details, links |
@@ -233,6 +249,60 @@ Fourth level — the actual to-dos. Every task belongs to a project. Through tha
 | Related Briefing | Relation → Briefings | The briefing that spawned this task (if applicable) |
 
 **Body:** Optional — checklists, sub-steps, or detailed notes. Use Notion's built-in checklist blocks for sub-dividing complex tasks rather than creating a 5th hierarchy level.
+
+**Saved view audit (v2 — required by G7' for the new Status option `not-deployed`):**
+- Default "Active Tasks" view filter: `Status != done AND != cancelled` → **update to also exclude `not-deployed`**.
+- "Tasks Due" linked view on State Dashboard: same filter → **same update**.
+- New default view "Awaiting Deploy": filter `Status = not-deployed`, sort by `Last Edited` descending. Used by briefing's Awaiting Deploy subsection.
+- Any user-created views filtering on Status: surface during migration ("I see N saved views filter on Task Status — do they need updating? [list]"). Document touched views in CHANGELOG.
+
+### Supporting Documents database (added v2)
+
+Absorbs the four legacy databases (Research / Drafts / Action Plans / Reference) into one. Distinguished by Type. Sits sideways from the four-level hierarchy — relates to Projects / Tasks / Departments via relations, not nested under any single one.
+
+| Property | Type | Purpose |
+|----------|------|---------|
+| Name | Title | Document name |
+| Type | Select | `brainstorm` / `prep` / `analysis` / `plan` / `artifact`. See `references/documentation-routing.md` for the decision tree. |
+| Date | Date | When the doc was created or last meaningfully edited |
+| Tags | Multi-select | Free-form, normalized to canonical list per `references/documentation-routing.md`. Suggested seeds: `persona`, `framework`, `worksheet`, `draft`, `research`, `reference`, `action-plan`, `meeting-prep`, `competitor`, `archived`, `legacy-uncategorized` |
+| Related Projects | Relation → Projects | |
+| Related Tasks | Relation → Tasks | |
+| Related Departments | Relation → Departments | |
+
+**No Status property.** Use `Tag = archived` to retire a doc (briefing source-scan and recall queries exclude `Tag = archived`).
+
+**Body:** the actual document content — long-form notes, frameworks, prep notes, drafts, etc.
+
+**Saved view recommendations (default views to create at S4):**
+- "All Active" — filter `Tag != archived`, default sort by Date descending.
+- "By Type" — group by Type.
+- "By Project" — group by Related Projects.
+
+### Reminders database (added v2)
+
+Date-scoped surfacing nudges. Distinct from Tasks (work to do). Sits sideways — can attach to Project / Department / Domain, or be orphaned. Surfaces in the briefing's "Reminders Today" section.
+
+| Property | Type | Purpose |
+|----------|------|---------|
+| Name | Title | Reminder name |
+| surface_on | Date | The day the brief should show this. Recurring reminders advance per terminal-action rule (see `flows/reminders.md`). |
+| Recurrence | Select | `none` / `daily` / `weekly` / `monthly` / `quarterly` / `yearly`. (Custom recurrence deferred to v2.1.) |
+| Project | Relation → Projects | Optional |
+| Department | Relation → Departments | Optional |
+| Domain | Relation → Domains | Optional |
+| Notes | Text | |
+| Status | Select | `active` / `snoozed` / `dismissed` |
+| snoozed_until | Date | Null when not snoozed |
+| Source Item | Text | Canonical identifier (per `references/signal-filters.md`) when the reminder was created from a Surfaced Items "remind me later" — links the reminder back to the original email/message/task. Null otherwise. |
+| Linked Task | Relation → Tasks | Optional. Set by the fuzzy-match dedup at create time. Notion's auto back-relation provides reverse-lookup. |
+| Priority | Select | `high` / `medium` / `low`. Defaults `medium`. Used for sort within "Reminders Today." |
+
+**Saved view recommendations (default views at S4):**
+- "Reminders Today" — filter `Status = active AND surface_on <= today AND (snoozed_until is empty OR snoozed_until <= today)`, sort overdue first then by Priority.
+- "Snoozed" — filter `Status = snoozed`.
+- "Dismissed" — filter `Status = dismissed` (history view).
+- "Upcoming (7 days)" — filter `Status = active AND surface_on between today and today+7d` (used by lookahead).
 
 ### People database
 
@@ -249,7 +319,9 @@ Mirrors `People/` folder.
 
 **Body:** ongoing notes about the person, history, context.
 
-### Reference database
+### Reference database (LEGACY in v2 — read-only)
+
+> **Status:** Legacy. v2 absorbed Reference into Supporting Documents (Type = `artifact`, Tag = `reference`). Read-only as above.
 
 Mirrors `Reference/` folder.
 

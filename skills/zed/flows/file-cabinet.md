@@ -10,10 +10,19 @@
 
 ## The four levels (smallest to largest)
 
-- **Task** — a specific action. Signals: "I need to …", "Remind me to …", "Schedule …", "Add …". One thing, one sitting. Example: "buy diapers."
+- **Task** — a specific action. Signals: "I need to …", "Add …", "Schedule …". One thing, one sitting. Example: "buy diapers." (NOTE: "remind me to / about" routes to Reminders, not Tasks — see Sideways entities below.)
 - **Project** — a specific initiative made of multiple tasks. Signals: "I want to build/create/launch/set up …", "Let's kick off …". Weeks to months of work. Example: "car maintenance system."
 - **Department** — a functional area within a life domain. Signals: naming a category of ongoing work, not a one-time initiative. Permanent. Example: "procurement."
 - **Domain** — a whole life entity. Signals: naming a business, a big life area, a shared/admin bucket. Top-level. Example: "Family."
+
+## Sideways entities (added v2 — not part of the four levels)
+
+Two entity types sit sideways from the hierarchy. They link INTO the chain via relations but don't nest under any single level.
+
+- **Supporting Documents** — working docs (brainstorm / prep / analysis / plan / artifact). Linked via `Related Projects`, `Related Tasks`, `Related Departments` relations. Schema in `references/notion-conventions.md` and `references/file-based-conventions.md`. Type decision tree in `references/documentation-routing.md`.
+- **Reminders** — date-scoped surfacing nudges (distinct from Tasks, which are work to do). Optional relations to Project / Department / Domain — can also be orphaned (no level relation), which is a valid state. Schema and CRUD logic in `flows/reminders.md`.
+
+When the user mentions a working doc or a reminder, do NOT try to fit it into the four-level chain. Route to the matching sideways entity. Reminders especially are easy to confuse with Tasks at first glance — `flows/reminders.md` handles the distinction at create time via fuzzy match.
 
 ---
 

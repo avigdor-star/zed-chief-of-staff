@@ -19,15 +19,19 @@ Chief-of-Staff/
 ├── Domains/                    ← One file per life domain (top of hierarchy)
 ├── Departments/                ← One file per department (functional areas within a domain)
 ├── Projects/                   ← One subfolder per active long-lived project
-├── Tasks/                      ← One file per task (actionable to-dos within a project)
+├── Tasks/                      ← One file per task (gains time_sensitivity + cos_id frontmatter in v2)
+├── Supporting-Documents/       ← (added v2) Working docs absorbed from Research / Drafts / Action-Plans / Reference. One file per doc.
+├── Reminders/                  ← (added v2) One file per reminder. Date-scoped surfacing nudges.
 ├── Briefings/                  ← Daily briefings, weekly reviews
-├── Research/                   ← Research outputs from sub-agents
-├── Drafts/                     ← Email drafts, message drafts
-├── Action-Plans/               ← Plans, breakdowns, decision docs
+├── Research/                   ← LEGACY in v2 — read-only; new entries go to Supporting-Documents/
+├── Drafts/                     ← LEGACY in v2 — read-only; new entries go to Supporting-Documents/
+├── Action-Plans/               ← LEGACY in v2 — read-only; new entries go to Supporting-Documents/
 ├── People/                     ← One file per high-priority person
-├── Reference/                  ← Evergreen reference material — SOPs, playbooks, saved links
+├── Reference/                  ← LEGACY in v2 — read-only; new entries go to Supporting-Documents/
 └── Archive/                    ← Old briefings, state snapshots, completed items
 ```
+
+**Legacy folders.** The four legacy folders (Research / Drafts / Action-Plans / Reference) are still read by briefing source-scan and recall — entries are tagged `[legacy]` in surfaced output. New entries always go to `Supporting-Documents/`. See `references/documentation-routing.md` § Legacy DB read rule.
 
 **Snapshots vs. backups:** see `references/vault-safety.md` for the distinction, snapshot mechanics, and restoration. In short: snapshots live inside this vault for quick rollback; backups live off-machine for survival.
 
@@ -51,6 +55,9 @@ platform: obsidian          # or logseq / markdown-folder
 chief_name: ""              # user's chosen name for the Chief
 personality: Professional   # Professional / Playful & lighthearted / Dry wit / Warm & encouraging / custom
 setup_status: complete      # in_progress / complete / complete-with-warning
+last_seen_version: v2       # added v2 — compared to SKILL.md `Current:` at Bootstrap step 3
+migration_v2_choice: null   # added v2 — moved / leave-in-place / leave-permanent / walking / complete
+legacy_plugin_choice: null  # added v2 — uninstalled / dismissed / permanent
 rollout_reminder:
   last_mentioned: YYYY-MM-DD
   last_contextual_mention: YYYY-MM-DD   # or leave blank / null
@@ -61,6 +68,13 @@ rollout_reminder:
   express_installed: []
 ---
 ```
+
+**State Dashboard body (v2 additions):**
+
+In addition to the existing `## Watch List`, `## Missed Messages`, `## Open Decisions` sections, the State Dashboard body now includes:
+
+- `## Surfaced Items` (added v2) — a markdown table tracking briefing items the user has marked. Columns: `Identifier` (canonical ID per `references/signal-filters.md`), `Surfaced On` (date), `State` (active / suppress-forever / suppress-this-thread / handled), `Source` (which brief section), `Notes`. Default state for new entries is `active`. Items in non-active states are dropped from briefings (G3 + Surfaced Items state check). `handled` items archive after 30 days.
+- `## Filter Rules` (existing — gains v2 columns `Source` and `Created At`) — Source is an enum: `manual` / `suppress-forever` / `setup` / `migration`. Used by un-suppress verb to identify reversible Filter Rules.
 
 ### State Dashboard properties (Logseq):
 
@@ -158,14 +172,53 @@ started: YYYY-MM-DD
 ```yaml
 ---
 type: task
-status: [to-do | in-progress | blocked | done | cancelled]
+status: [to-do | in-progress | blocked | done | cancelled | not-deployed]   # not-deployed added v2
 priority: [urgent | high | medium | low]
+time_sensitivity: 0    # added v2 — integer 0–5; null/missing OK for legacy tasks. See references/signal-filters.md for anchors.
 due: YYYY-MM-DD
 project: "[[Projects/project-name]]"
 goal: [optional — what outcome this task serves]
 waiting-on: [who or what is blocking this, if status = blocked]
+cos_id: [UUID — added v2; written at file creation, never changes]
 ---
 ```
+
+### Supporting Document frontmatter (added v2 — lives in `Supporting-Documents/`):
+```yaml
+---
+type: supporting-document
+doc_type: [brainstorm | prep | analysis | plan | artifact]
+date: YYYY-MM-DD
+tags: [persona, framework, ...]    # free-form; normalized to canonical list per references/documentation-routing.md
+related_projects: ["[[Projects/project-name]]"]   # zero or more
+related_tasks: ["[[Tasks/task-slug]]"]            # zero or more
+related_departments: ["[[Departments/department-name]]"]  # zero or more
+cos_id: [UUID]
+---
+```
+
+No `status` field on Supporting Documents. Use `tags: [archived]` to retire (briefing source-scan and recall queries exclude `tag = archived`).
+
+### Reminder frontmatter (added v2 — lives in `Reminders/`):
+```yaml
+---
+type: reminder
+surface_on: YYYY-MM-DD              # the day the brief shows this. Recurring reminders advance per terminal-action rule.
+recurrence: [none | daily | weekly | monthly | quarterly | yearly]
+project: "[[Projects/project-name]]"   # optional
+department: "[[Departments/department-name]]"   # optional
+domain: "[[Domains/domain-name]]"   # optional
+notes: [optional]
+status: [active | snoozed | dismissed]
+snoozed_until: YYYY-MM-DD            # null when not snoozed
+source_item: [canonical identifier per references/signal-filters.md]   # null unless created from Surfaced Items
+linked_task_id: [cos_id of a Task]   # optional, set by fuzzy-match dedup
+priority: [high | medium | low]      # default medium
+cos_id: [UUID]
+---
+```
+
+Reminder can attach to any level of the file cabinet (Project / Department / Domain) or be orphaned (no relation set).
 
 ### Person file frontmatter (lives in `People/`):
 ```yaml
@@ -176,13 +229,15 @@ priority: [high | medium | low]
 ---
 ```
 
-### Reference file frontmatter (lives in `Reference/`):
+### Reference file frontmatter (lives in `Reference/` — LEGACY in v2):
 ```yaml
 ---
 type: reference
 topic: [topic]
 ---
 ```
+
+> **Status:** Legacy. v2 absorbed Reference files into Supporting Documents (`doc_type: artifact`, `tags: [reference]`). Existing Reference files stay readable; new entries route to `Supporting-Documents/`.
 
 ## Wikilinks
 
@@ -229,9 +284,11 @@ Use the `[[path|display text]]` format when the file path is long — it keeps t
 - Briefings: `YYYY-MM-DD-briefing.md`
 - Weekly reviews: `YYYY-MM-DD-weekly-review.md`
 - Monthly cleanups: `YYYY-MM-monthly-cleanup.md`
-- Research: `YYYY-MM-DD-[topic-slug].md`
-- Drafts: `YYYY-MM-DD-[recipient-or-topic].md`
-- Action plans: `YYYY-MM-DD-[topic-slug].md`
+- Research (legacy): `YYYY-MM-DD-[topic-slug].md`
+- Drafts (legacy): `YYYY-MM-DD-[recipient-or-topic].md`
+- Action plans (legacy): `YYYY-MM-DD-[topic-slug].md`
+- **Supporting Documents (added v2):** `Supporting-Documents/YYYY-MM-DD-[doc-slug].md`
+- **Reminders (added v2):** `Reminders/[reminder-slug].md` (no date prefix — surface_on lives in frontmatter; slug stays stable as recurrence advances)
 - State snapshots (in-vault): `state-snapshot-YYYY-MM-DD-HHMM.md` (append `-2`, `-3`, … if the exact timestamp already exists)
 - Feed archives: `feed-archive-YYYY-MM-DD.md`
 - Domain files: `Domains/[domain-slug].md` (e.g., `Domains/my-agency.md`, `Domains/personal.md`)
@@ -239,7 +296,9 @@ Use the `[[path|display text]]` format when the file path is long — it keeps t
 - Project folders: `Projects/[project-slug]/` (lowercase, hyphens, short)
 - Task files: `Tasks/[task-slug].md` (e.g., `Tasks/reply-to-vendor-quote.md`)
 - Person files: `People/First-Last.md`
-- Reference files: `Reference/[topic-slug].md`
+- Reference files (legacy): `Reference/[topic-slug].md`
+
+**File-slug stability (v2 — `cos_id` rule).** File slugs are not stable identifiers — files get renamed, slugs change. v2 introduces a `cos_id:` UUID frontmatter key on Tasks, Supporting Documents, and Reminders. Generate at file creation; never change. The skill uses `cos_id` for canonical references (Linked Task, Source Item, Surfaced Items identifiers). Legacy Tasks without `cos_id` get one written on first read (read-then-write-then-resnapshot per G2 if writing State Dashboard, otherwise just write).
 
 ## Templates
 
@@ -503,15 +562,44 @@ status:: active
 **Task:**
 ```
 type:: task
-status:: to-do
+status:: to-do            # to-do / in-progress / blocked / done / cancelled / not-deployed (added v2)
 priority:: medium
+time-sensitivity:: 0      # added v2 — 0–5 (null/missing OK)
 due:: YYYY-MM-DD
 project:: [[Projects/project-name]]
 goal:: [optional]
 waiting-on:: [optional]
+cos-id:: [UUID]           # added v2
 ```
 
-**Project / Person / Reference:** same field-for-field mapping — every YAML key becomes a `key:: value` line. Projects now include a `department:: [[Departments/department-name]]` property.
+**Supporting Document (added v2):**
+```
+type:: supporting-document
+doc-type:: brainstorm     # brainstorm / prep / analysis / plan / artifact
+date:: YYYY-MM-DD
+tags:: persona, framework
+related-projects:: [[Projects/project-name]]
+related-tasks:: [[Tasks/task-slug]]
+related-departments:: [[Departments/department-name]]
+cos-id:: [UUID]
+```
+
+**Reminder (added v2):**
+```
+type:: reminder
+surface-on:: YYYY-MM-DD
+recurrence:: weekly        # none / daily / weekly / monthly / quarterly / yearly
+project:: [[Projects/project-name]]   # optional
+notes:: [optional]
+status:: active
+snoozed-until::            # blank when not snoozed
+source-item:: [canonical identifier]   # blank unless from Surfaced Items
+linked-task-id:: [cos-id]  # optional
+priority:: medium
+cos-id:: [UUID]
+```
+
+**Project / Person / Reference (legacy):** same field-for-field mapping — every YAML key becomes a `key:: value` line. Projects now include a `department:: [[Departments/department-name]]` property.
 
 ### Page placement: folders → namespaces (or folders)
 

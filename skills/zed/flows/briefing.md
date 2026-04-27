@@ -15,35 +15,52 @@ Read these in order, using the platform from `State Dashboard → My Setup → P
 ### File-based platforms (`obsidian`, `logseq`, `markdown-folder`)
 
 1. **Index:** `Chief-of-Staff/_index.md` — the vault contract. If a later action doesn't fit the index, the index is right and the action is wrong.
-2. **State Dashboard:** `Chief-of-Staff/State Dashboard.md` — current state.
+2. **State Dashboard:** `Chief-of-Staff/State Dashboard.md` — current state. Includes the new v2 sections (Surfaced Items, Filter Rules with provenance).
 3. **Live Feed:** `Chief-of-Staff/Live Feed.md` — what's happened since last session. **Read the ALERTS section first.**
-4. **Tasks:** scan `Chief-of-Staff/Tasks/` for files with `status: to-do`, `in-progress`, or `blocked`. Note overdue (due < today). Feeds the TASKS section.
-5. **Messaging channel:** recent messages from the team feed channel (Slack `#cos-feed` or equivalent), if connected.
-6. **Latest briefing:** most recent file in `Chief-of-Staff/Briefings/`.
-7. **Captain's Log (last 7 days):** list entries in `Chief-of-Staff/Captain's Log/` with dates in the last 7 days. Titles + Type only.
-8. **Life context (optional):** any journal, life-snapshot, or personal-notes file elsewhere in the vault.
+4. **Tasks (active):** scan `Chief-of-Staff/Tasks/` for files with `status: to-do`, `in-progress`, or `blocked`. Note overdue (due < today). Feeds the TASKS section. Excludes `not-deployed`.
+5. **Tasks (awaiting deploy)** (added v2): scan `Chief-of-Staff/Tasks/` for files with `status: not-deployed`. Feeds the AWAITING DEPLOY subsection. Skip if zero.
+6. **Reminders today** (added v2): scan `Chief-of-Staff/Reminders/` for files where `status: active AND surface_on <= today AND (snoozed_until is empty OR snoozed_until <= today)`. Feeds REMINDERS TODAY section.
+7. **Messaging channel:** recent messages from the team feed channel (Slack `#cos-feed` or equivalent), if connected.
+8. **Latest briefing:** most recent file in `Chief-of-Staff/Briefings/`.
+9. **Captain's Log (last 7 days):** list entries in `Chief-of-Staff/Captain's Log/` with dates in the last 7 days. Titles + Type only.
+10. **Supporting Documents tied to active projects** (added v2): scan `Chief-of-Staff/Supporting-Documents/` for entries linked to projects active in the briefing. List title + Type + Tags.
+11. **Legacy DBs (read-only, tagged `[legacy]`)** (added v2): scan `Chief-of-Staff/Research/`, `Chief-of-Staff/Drafts/`, `Chief-of-Staff/Action-Plans/`, `Chief-of-Staff/Reference/`. Cap at 10 entries each per `references/signal-filters.md` § Per-source read budget. Surface entries with `[legacy]` annotation.
+12. **Life context (optional):** any journal, life-snapshot, or personal-notes file elsewhere in the vault.
 
 ### Notion (`notion`)
 
-1. **State Dashboard page** — current state (Platform field, Active Projects view, Tasks Due view, High-Priority People view, Watch List, Open Decisions). Equivalent to `_index.md` + `State Dashboard.md` combined; schema in `references/notion-conventions.md`.
+1. **State Dashboard page** — current state (Platform field, Active Projects view, Tasks Due view, High-Priority People view, Watch List, Open Decisions, **Surfaced Items**, **Filter Rules**). Equivalent to `_index.md` + `State Dashboard.md` combined; schema in `references/notion-conventions.md`.
 2. **Live Feed page** — **read the Urgent Alerts callout at the top first.**
-3. **Tasks:** query the Tasks database for Status = `to-do`, `in-progress`, or `blocked`. Note overdue.
-4. **Messaging channel:** if connected.
-5. **Latest briefing:** query Briefings database, sort by Date descending, limit 1.
-6. **Captain's Log (last 7 days):** query the top-level `Captain's Log` database. Titles + Type only.
-7. **Life context (optional):** any life-snapshot or journal page in the broader Notion workspace.
+3. **Tasks (active):** query the Tasks database for Status ∈ {`to-do`, `in-progress`, `blocked`}. Note overdue. Excludes `not-deployed`.
+4. **Tasks (awaiting deploy)** (added v2): query for Status = `not-deployed`. Feeds AWAITING DEPLOY.
+5. **Reminders today** (added v2): query Reminders database where `Status = active AND surface_on <= today AND (snoozed_until is empty OR snoozed_until <= today)`.
+6. **Messaging channel:** if connected.
+7. **Latest briefing:** query Briefings database, sort by Date descending, limit 1.
+8. **Captain's Log (last 7 days):** query the top-level `Captain's Log` database. Titles + Type only.
+9. **Supporting Documents tied to active projects** (added v2): query Supporting Documents where `Related Projects` includes any active project. List Name + Type + Tags.
+10. **Legacy DBs (read-only, tagged `[legacy]`)** (added v2): query Research / Drafts / Action Plans / Reference. Cap at 10 each per signal-filters § Per-source read budget. Surface with `[legacy]` annotation.
+11. **Life context (optional):** any life-snapshot or journal page in the broader Notion workspace.
 
 > In Notion, if something doesn't fit the schema in `notion-conventions.md`, the schema is right and the action is wrong.
 
 **Monday rule.** On Mondays (or after any gap of 2+ days since last session), scan email and messaging for the whole gap period. "Since last session" = `last_updated` (file-based) or `Last Session At` (Notion). If missing, default to last 72 hours and note the fallback in the briefing.
 
+**Once-per-session legacy nudge** (added v2): if any `[legacy]`-tagged entries surfaced this brief AND `migration_v2_choice` ∈ {`leave-in-place`, `walking`} AND the v2-migration prompt is NOT firing this session: offer once — "I surfaced [N] legacy entries today. Want me to migrate any of them now?" (G9 conflict-detection: at most one legacy-themed prompt per session.)
+
 Apply signal filters per `references/signal-filters.md`.
 
 ---
 
-## Step 2 — Filter Rules hard gate (G3)
+## Step 2 — Filter Rules + Surfaced Items hard gate (G3)
 
-Before delivering ANY item, check it against `State Dashboard → Filter Rules`. Match by sender, domain, company, or topic → drop silently. No exceptions. Applies to every section: Top 3, Messages, Carryover, Recommended Actions, Risks/Blockers, Watch List Check. A filter rule added after an item was first surfaced still kills it on the next pass.
+Before delivering ANY item, run it through the filter pipeline in `references/signal-filters.md`:
+
+1. Compute the candidate item's **canonical identifier** (per signal-filters § Canonical Identifiers).
+2. Check **Filter Rules** — match by sender / domain / company / topic → drop silently.
+3. Check **Surfaced Items state** (added v2) — if the canonical identifier matches an entry in `State Dashboard → Surfaced Items` with state ∈ {`suppress-forever`, `suppress-this-thread`, `handled`} → drop silently.
+4. Items with state `active` continue through the pipeline.
+
+A filter rule or Surfaced Items state added after an item was first surfaced still kills it on the next pass. Applies to every section: Top 3, Messages, Carryover, Recommended Actions, Risks/Blockers, Watch List Check, **Reminders Today** (added v2), **Awaiting Deploy** (added v2).
 
 ---
 
@@ -62,41 +79,47 @@ If a section has no content, announce it ("Messages: nothing") and still ask the
 
 ### Section order and tailored questions
 
-1. **Alerts** — system-level only: backup (Axiom 1), structure drift (Axiom 2), connector failures. NOT personal watch-list items.
+1. **Alerts** — system-level only: backup (Axiom 1), structure drift (Axiom 2), connector failures, version-constant mismatch (Bootstrap step 0). NOT personal watch-list items.
    - If backup is flagged: pull free slots from the calendar and propose a specific time. ("You're free tomorrow 2–3 PM. Want me to book a backup setup block then?") If yes, create the calendar event.
    - Q: "Want me to handle any of these?"
 
-2. **Carryover** — unfinished items from the last briefing.
+2. **Reminders Today** (added v2) — Reminders where `Status = active AND surface_on ≤ today AND (snoozed_until is null OR snoozed_until ≤ today)`. Sort per `references/signal-filters.md` § Reminders sort. Hide section if empty.
+   - Q: "Want me to handle any of these, snooze, or dismiss?"
+
+3. **Carryover** — unfinished items from the last briefing.
    - Q: "Still relevant, or drop them?"
 
-3. **Schedule** — today's and tomorrow's calendar. Meetings, conflicts, tight windows.
+4. **Schedule** — today's and tomorrow's calendar. Meetings, conflicts, tight windows.
    - Q: "Anything to add or move?"
 
-4. **Top 3** — three most important items for today. Rank: deadline > people waiting > revenue > strategic > other.
+5. **Top 3** — three most important items for today. Category rank: deadline > people waiting > revenue > strategic > other. Within category, rank Tasks by composite score per `references/signal-filters.md` § Within-category ranking. Tasks with `Time Sensitivity = 5` always surface here regardless of Priority (hard override).
    - Q: "Want me to kick any of these off?"
 
-5. **Tasks** — tasks with Status = to-do, in-progress, or blocked. Overdue first, then due-today, then blocked.
+6. **Tasks** — tasks with Status = to-do, in-progress, or blocked. Excludes `not-deployed` (added v2 — surfaced separately). Overdue first, then due-today, then blocked. Within each bucket, rank by composite score (Priority + Time Sensitivity) per signal-filters.
    - Q: "Any status changes?"
 
-6. **Messages** — emails, DMs, items needing reply or decision. Sender, subject, one-line summary.
+6a. **Awaiting Deploy** (added v2) — Tasks with Status = `not-deployed`, grouped by Project. If 5+ items, render as count + collapsed list ("Awaiting Deploy: 7 items (tap to expand)"). User asks for full list or picks by name. Hide subsection entirely if zero items.
+    - Q: "Anything ready to ship today?"
+
+7. **Messages** — emails, DMs, items needing reply or decision. Sender, subject, one-line summary.
    - Q: "Want me to draft a reply to any of these?"
 
-7. **Missed Message Check** — review `State Dashboard → Missed Messages`. Confirm past corrections still honored. Surface patterns flagged multiple times (candidate for permanent filter rule).
+8. **Missed Message Check** — review `State Dashboard → Missed Messages`. Confirm past corrections still honored. Surface patterns flagged multiple times (candidate for permanent filter rule).
    - Q: "Anything I'm still filtering that you want surfaced?"
 
-8. **Watch List** — items from `State Dashboard → Watch List` needing attention today.
+9. **Watch List** — items from `State Dashboard → Watch List` needing attention today.
    - Q: "Any updates on these?"
 
-9. **Risks / Blockers** — things that could become problems if ignored (deadlines drifting, budget caps nearing, someone waiting too long).
-   - Q: "Anything you want to act on?"
+10. **Risks / Blockers** — things that could become problems if ignored (deadlines drifting, budget caps nearing, someone waiting too long).
+    - Q: "Anything you want to act on?"
 
-10. **Recommended Actions** — specific next steps. "Reply to [person] about [topic]" not "consider following up."
+11. **Recommended Actions** — specific next steps. "Reply to [person] about [topic]" not "consider following up."
     - Q: "Want me to queue any of these?"
 
-11. **File Cabinet Check** — soft, optional nudge surfacing records without a full parent chain (tasks without a project, projects without a department, departments without a domain). Render ONLY if there is at least one unnested record. Never frame as a violation. Always offer — don't demand. If user wants to home some, hand off to `flows/file-cabinet.md`.
+12. **File Cabinet Check** — soft, optional nudge surfacing records without a full parent chain (tasks without a project, projects without a department, departments without a domain). Render ONLY if there is at least one unnested record. Never frame as a violation. Always offer — don't demand. If user wants to home some, hand off to `flows/file-cabinet.md`.
     - Q: "Want to home any of these now, or leave them for later?"
 
-12. **Rollout Nudge** — one soft sentence per the Pacer pattern (`references/rollout-reminder.md`). Render ONLY when ALL are true: `next_eligible ≤ today`, no Axiom 1 or 2 flag this session, nudge hasn't fired this session. If the render gate fails, skip silently (don't even announce as empty).
+13. **Rollout Nudge** — one soft sentence per the Pacer pattern (`references/rollout-reminder.md`). Render ONLY when ALL are true: `next_eligible ≤ today`, no Axiom 1 or 2 flag this session, nudge hasn't fired this session. If the render gate fails, skip silently (don't even announce as empty).
     - Q (only if rendered): "Want me to start on that now?"
 
 The Chief loads `references/rollout-reminder.md` and uses Section A's decision logic to decide whether to render, and the sentence templates to pick the wording. If the user responds, handle per Sections C–L of that reference.
