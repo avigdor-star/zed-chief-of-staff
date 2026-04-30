@@ -4,6 +4,41 @@ Changes to the skill during beta development. Newest first.
 
 ---
 
+## 2026-04-30
+
+### Backup setup — Path E Option A rewritten for Cowork sandbox reality
+
+Discovered during a real install that the previously documented Option A (single Cowork scheduled task) was architecturally broken: Cowork scheduled tasks run in an isolated sandbox and cannot write to `/Volumes/` or `~/Documents/`. Following the doc as written produced a "successful" weekly run that never actually placed an encrypted backup into the user's Cryptomator vault — exports landed silently in a session-internal outputs folder.
+
+#### Files edited
+
+- `skills/zed/references/backup-setup.md` — Rewrote Path E Option A. Added an architectural-reality warning at the top explaining the Cowork sandbox limitation (cannot write to `/Volumes/` or `~/Documents/`; writes land in `~/Library/Application Support/Claude/local-agent-mode-sessions/<id>/<id>/local_<id>/outputs/`). Split Option A into two required components: Component 1 (Cowork scheduled task that exports to its session outputs) and Component 2 (native Mac launchd mover that finds the export in the sessions tree and moves it into the unlocked Cryptomator vault). Updated the embedded scheduled-task prompt: removed the impossible `~/Documents/` write target and the "ENCRYPT" step that claimed to verify vault placement; replaced with `outputs/CoS-Notion-Backup/YYYY-MM-DD/` and a new Status enum value `EXPORTED_PENDING_ENCRYPTION` that is flipped to `VERIFIED` by the mover. Added a Component 2 walkthrough describing the mover's seven-step behavior, the two files it generates (`cos-backup-mover.sh` + `com.<owner>.cos-backup-mover.plist`), the install steps (`~/scripts/`, `~/Library/LaunchAgents/`, `launchctl load`), the test procedure, and the default schedule (Cowork at Tuesday 12:00, mover at Tuesday 12:30). Updated the parallel calendar reminder to reference the +30 mover time. Added a "Pre-approve connector permissions" step prompting the user to "Run now" once after task creation so future runs don't pause mid-task on first-time permission grants.
+
+#### What did NOT change (deliberately)
+
+- Option B (manual export). It runs entirely on the user's Mac with no Cowork sandbox involvement; the existing instructions are correct.
+- Part 2 (encryption section) and the per-path Verify procedures. Option A's encryption is now handled by Component 2; Part 2's instructions still apply to Option B.
+- All other reference files. The bug was localized to Path E Option A.
+
+#### Discovery context
+
+Real install on 2026-04-30 followed the original Option A. The Cowork scheduled task ran successfully on 2026-04-28 per `list_scheduled_tasks` (`lastRunAt: 2026-04-28T19:10:15.668Z`), but a `find` of the user's home folder revealed the export had landed at `~/Library/Application Support/Claude/local-agent-mode-sessions/<long-path>/outputs/CoS-Notion-Backup/2026-04-28/`, never in the Cryptomator vault at `/Volumes/chief-of-staff-backup/`. Patched in this session by adding a Mac launchd mover (now documented as Component 2) and verifying the existing 2026-04-28 export moved into the encrypted vault.
+
+#### G7' audit (this change)
+
+- **Null-handling check.** New `EXPORTED_PENDING_ENCRYPTION` Status option on Backup row. Existing reads of Backup Status (Bootstrap step 8 / Axiom 1 staleness check) treat any non-VERIFIED value as still-pending; no special handling required.
+- **Status filter audit.** Briefing rendering does not filter on Backup Status — it surfaces non-VERIFIED states regardless of the specific value. No filter updates needed.
+- **Notion saved views audit.** State Dashboard's Backup row is a single record, not a database view filter. N/A.
+- **External integration audit.** No watcher prompts referenced the previous Status enum directly. N/A.
+
+#### G9 PRC review
+
+- **Provenance.** The Backup row's Status / Last Exported / Last Verified fields all carry the writer (Cowork task vs. Mac mover) in the Method/Note text. Mover writes a `.last-mover-run` timestamp file inside the vault as a parallel provenance signal that survives independent of the State Dashboard.
+- **Reversal.** All Backup row writes are State-Dashboard writes subject to G2 snapshots (existing). Mover moves are not destructive (mv preserves data; vault is the single source of truth for encrypted copies). User can re-run the mover manually at any time.
+- **Conflict-Detection.** Mover skips dated subfolders already present in the vault (no overwrites). Cowork task and mover are decoupled by file location and timing — neither blocks on the other.
+
+---
+
 ## 2026-04-27
 
 ### Zed v3 — Personal Journal feature (Captain's Log retired)

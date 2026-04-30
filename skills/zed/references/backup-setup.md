@@ -176,55 +176,84 @@ That way, even if Notion vanishes tomorrow, you still have an encrypted, off-Not
 
 Pick ONE of these. Option A is more automatic; Option B is more reliable if the Notion connector is flaky.
 
-**Option A — scheduled task in Cowork (more automatic):**
+**Option A — scheduled task in Cowork + Mac launchd mover (more automatic):**
 
-1. "Open a Cowork session. Say: 'Schedule a task called Notion Backup Export to run weekly on Sundays at 9am. Here's the prompt:'"
+> ⚠️ **Architectural reality (read this before setting it up).** Cowork scheduled tasks run in an isolated sandbox. They CANNOT write to `/Volumes/` or `~/Documents/` on the user's Mac. Their writes land in a session-internal folder under `~/Library/Application Support/Claude/local-agent-mode-sessions/<id>/<id>/local_<id>/outputs/`. To get an export into the encrypted Cryptomator vault, a separate **native Mac launchd job** is required to move it. Option A therefore has TWO components — skip either one and the encrypted backup never happens.
+
+#### Component 1 — Cowork scheduled task (the export)
+
+1. "Open a Cowork session. Say: 'Schedule a task called Notion Backup Export to run weekly on Tuesdays at 12pm. Here's the prompt:'"
 2. Paste this prompt into the scheduled task:
    ```
    NOTION BACKUP EXPORT — Scheduled Task
    ----------------------------------------
-   Run order is fixed: snapshot → export → encrypt. Do NOT reorder.
+   Run order is fixed: snapshot → export → record. Do NOT reorder.
+
+   Note: this task runs in the Cowork sandbox and CANNOT write to /Volumes/ or
+   ~/Documents/. The export lands in this session's outputs folder. A separate
+   native Mac launchd job (Component 2) moves the dated subfolder into the
+   encrypted Cryptomator vault at +30 minutes.
 
    1. SNAPSHOT FIRST (hard gate).
-      Use the Notion connector to duplicate the State Dashboard page and
-      rename the duplicate to:
+      Use the Notion connector to duplicate the State Dashboard page and rename:
         state-snapshot-YYYY-MM-DD-HHMM
-      Store it under the Archive area.
-      If the snapshot fails (API error, permission denied, timeout):
-        STOP. Do NOT proceed to export. Post a P1 alert surfacing the failure.
-      Rationale: the export that follows takes several minutes and can catch
-      the vault mid-edit. The snapshot is the rollback point if the export
-      corrupts or partially overwrites anything.
+      Store under the Archive area.
+      If the snapshot fails: STOP and post P1 alert.
 
    2. EXPORT.
-      Use the Notion connector to fetch the Chief of Staff parent page
-      and every descendant (child pages and database records).
+      Use the Notion connector to fetch the Chief of Staff parent page and
+      every descendant (child pages and database records).
       Write each item as a markdown file to:
-        ~/Documents/CoS-Notion-Backup/YYYY-MM-DD/
-        — Each database row → one .md file, named by the page's Title property.
-        — Each regular page body → one .md file, named by the page title.
+        outputs/CoS-Notion-Backup/YYYY-MM-DD/
+        — Each database row → one .md file, named by Title property.
+        — Each page body → one .md file, named by page title.
         — Preserve folder structure matching the Notion parent/child tree.
-      If any item fails to fetch: log the error, complete the rest, and post
-      a P1 alert with the failed item list. Do NOT proceed to step 3 if more
-      than 10% of items failed — stop and surface instead.
+      If >10% of items fail: STOP and post P1 alert.
 
-   3. ENCRYPT.
-      The export folder lives inside the user's chosen encrypted location
-      (Cryptomator vault OR Syncthing-shared folder — set during setup).
-      Confirm the new dated subfolder is inside that encrypted location.
-      If it's outside: move it into the encrypted location, then confirm.
+   3. RECORD.
+      Update State Dashboard → System Health → Connectors → Backup:
+        Status = EXPORTED_PENDING_ENCRYPTION
+        Last Exported = today's date
+        Method = Notion-export → mover → Cryptomator + cloud
+        Note = "Encryption handled by Mac launchd job at +30 min."
+      Reuse the snapshot from step 1 — no need to re-snapshot.
 
-   4. RECORD.
-      Update State Dashboard → System Health → Connectors → Backup
-      → Last Verified = today's date.
-      (This write also takes a snapshot first per the standard gate —
-      but the snapshot from step 1 is fresh enough; reuse it rather than
-      taking a second one.)
+   The "Last Verified" / Status=VERIFIED flip is owned by the Mac launchd
+   mover after a successful move into the vault. Do NOT set it from this task.
    ```
-3. Confirm the task shows up in the user's scheduled task list and will run at the next scheduled time.
-4. **Parallel calendar reminder (backup signal).** Also set a recurring weekly calendar reminder: "Notion CoS export — confirm it ran (Sunday 9am)." The scheduled task is primary; this calendar reminder is a human-visible nudge so the user notices if the task silently fails (task didn't trigger, API error not surfaced, etc.). When the reminder fires, spend 30 seconds confirming the latest `~/Documents/CoS-Notion-Backup/YYYY-MM-DD/` folder exists with this week's date.
+3. Confirm the task shows up in the user's scheduled task list.
+4. **Pre-approve connector permissions.** First-time Cowork scheduled task runs may pause for permission approvals (Notion connector, filesystem writes). Tell the user to click "Run now" once manually after creation so future runs don't pause silently mid-task.
 
-**Why the order matters (snapshot → export → encrypt).** The Notion export takes several minutes during which the vault is still live — the user could be editing. If the export catches the vault mid-edit and corrupts a record, the snapshot (taken before anything else) is your rollback point. Encrypting before the snapshot would lose that rollback if the encryption step fails. Recording the Last Verified date last means the dashboard only reports success if every previous step actually succeeded.
+#### Component 2 — Mac launchd mover (the encryption step)
+
+The mover is a small native Mac job that runs 30 minutes after the Cowork task. It:
+
+1. Verifies the Cryptomator vault is mounted and writable. If not → Mac notification + abort (no silent fail).
+2. Searches `~/Library/Application Support/Claude/local-agent-mode-sessions/` for `CoS-Notion-Backup` folders.
+3. Moves any dated subfolders (YYYY-MM-DD format) into `/Volumes/<vault-name>/CoS-Notion-Backup/`.
+4. Skips dates already present in the vault (no overwrites).
+5. Writes a marker file `.last-mover-run` (timestamp) inside the vault.
+6. Pops a Mac notification on success or failure.
+7. Logs everything to `~/Library/Logs/cos-backup-mover.log`.
+
+**Setup walkthrough.** The Chief of Staff session generates the two files for the user on demand:
+
+- A shell script (`cos-backup-mover.sh`) implementing the seven steps above. Bash, ~100 lines.
+- A launchd plist (`com.<owner>.cos-backup-mover.plist`) scheduling the script weekly.
+
+The user installs them with three commands in Terminal:
+
+1. Copy the script to `~/scripts/cos-backup-mover.sh` and run `chmod +x` on it to make it executable.
+2. Copy the plist to `~/Library/LaunchAgents/com.<owner>.cos-backup-mover.plist`.
+3. Run `launchctl load ~/Library/LaunchAgents/com.<owner>.cos-backup-mover.plist` once to enable the schedule.
+
+Test by running the script manually before the first scheduled run: `bash ~/scripts/cos-backup-mover.sh`. The Mac notification confirms the result.
+
+**Schedule timing.** The Cowork task runs 30 minutes BEFORE the mover. Default: Cowork at Tuesday 12:00, mover at Tuesday 12:30. Adjust both together if the user wants a different day or time.
+
+5. **Parallel calendar reminder (backup signal).** Also set a recurring weekly calendar reminder: "Notion CoS export + mover — confirm both ran (Tuesday 12:30 PM)." The scheduled task and mover are primary; this calendar reminder is a human-visible nudge so the user notices if either silently fails. When the reminder fires, spend 30 seconds confirming the latest dated folder exists inside `/Volumes/<vault-name>/CoS-Notion-Backup/`.
+
+**Why the order matters (snapshot → export → mover → record-verified).** The Notion export takes several minutes during which the workspace is still live — the user could be editing. If the export catches a record mid-edit and corrupts it, the snapshot (taken before anything else) is your rollback point. The mover encrypts (by virtue of writing into the unlocked vault, which encrypts on the fly to the cloud-synced encrypted side). Verified status is set last so it only flips green when every previous step succeeded.
 
 **Staleness threshold (Option A specific):** Notion exports are weekly, so the standard 30-day staleness window from Step 1a is too loose here — three missed exports would go unflagged. For Option A (and Option B), treat Backup Status as `STALE` if `Last Verified` is more than **10 days** old.
 
